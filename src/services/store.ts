@@ -1,0 +1,240 @@
+import fs from "fs";
+import path from "path";
+import { prisma } from "@/lib/prisma";
+import { SEED_CATEGORIES, SEED_PRODUCTS, SeedProduct } from "@/data/seedData";
+
+const DEV_DB_FILE = path.join(process.cwd(), ".dev-db.json");
+
+interface DevDB {
+  users: any[];
+  anonymousProfiles: any[];
+  categories: any[];
+  subcategories: any[];
+  products: any[];
+  rentalBookings: any[];
+  purchaseOrders: any[];
+  cartItems: any[];
+  wishlistItems: any[];
+  payments: any[];
+  notifications: any[];
+  relayMessages: any[];
+  reviews: any[];
+  disputes: any[];
+}
+
+function initDevDB(): DevDB {
+  const users = [
+    {
+      id: "usr_default_demo",
+      name: "Siddharth Rao",
+      email: "demo@ywd.in",
+      role: "USER",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: "usr_vendor_1",
+      name: "TechGear Vendor",
+      email: "vendor1@ywd.in",
+      role: "USER",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ];
+
+  const anonymousProfiles = [
+    {
+      id: "prof_default",
+      userId: "usr_default_demo",
+      alias: "EcoRenter-4912",
+      avatarColor: "#18352D",
+      bio: "Tech enthusiast & active circular economy lender.",
+      trustScore: 99.2,
+      completedRentals: 19,
+      isVerified: true,
+      campusHub: "Central Verified Locker • Hub A",
+    },
+    {
+      id: "prof_vendor_1",
+      userId: "usr_vendor_1",
+      alias: "GearVault-8801",
+      avatarColor: "#C46A42",
+      bio: "Verified premium equipment supplier with 100% genuine calibrated gear.",
+      trustScore: 99.8,
+      completedRentals: 62,
+      isVerified: true,
+      campusHub: "Technology & Equipment Desk • Point 1",
+    },
+  ];
+
+  const categories = SEED_CATEGORIES.map((c) => ({
+    id: c.id,
+    name: c.name,
+    slug: c.slug,
+    icon: c.icon,
+    count: c.count,
+    description: c.description,
+  }));
+
+  const subcategories: any[] = [];
+  SEED_CATEGORIES.forEach((c) => {
+    c.subcategories.forEach((sub) => {
+      subcategories.push({
+        id: sub.id,
+        categoryId: c.id,
+        name: sub.name,
+        slug: sub.slug,
+      });
+    });
+  });
+
+  const products = SEED_PRODUCTS.map((p) => {
+    const cat = categories.find((c) => c.slug === p.categorySlug);
+    return {
+      id: p.id,
+      title: p.title,
+      description: p.description,
+      categoryId: cat ? cat.id : categories[0].id,
+      categorySlug: p.categorySlug,
+      subcategorySlug: p.subcategorySlug,
+      ownerId: "usr_vendor_1",
+      conditionGrade: p.conditionGrade,
+      rentalPriceHourly: p.rentalPriceHourly,
+      rentalPriceDaily: p.rentalPriceDaily,
+      rentalPriceWeekly: p.rentalPriceWeekly,
+      rentalPriceMonthly: p.rentalPriceMonthly,
+      rentalPriceSemester: p.rentalPriceSemester,
+      buyPrice: p.buyPrice,
+      mrpReference: p.mrpReference,
+      deposit: p.deposit,
+      isRentable: p.isRentable,
+      isPurchasable: p.isPurchasable,
+      isAvailable: p.isAvailable,
+      isPaused: false,
+      pickupAvailable: p.pickupAvailable,
+      deliveryAvailable: p.deliveryAvailable,
+      campusHub: p.campusHub,
+      images: p.images.map((url, i) => ({
+        id: `img_${p.id}_${i}`,
+        url,
+        isPrimary: i === 0,
+      })),
+      conditionPhotos: p.conditionPhotos,
+      specs: p.specs,
+      owner: p.owner,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  });
+
+  const notifications = [
+    {
+      id: "notif_1",
+      userId: "usr_default_demo",
+      title: "Escrow Deposit Held Securely",
+      message: "Your security deposit is protected in YwD escrow. It will be refunded via UPI automatically upon clean return.",
+      type: "ESCROW",
+      isRead: false,
+      createdAt: new Date(Date.now() - 3600000).toISOString(),
+    },
+    {
+      id: "notif_2",
+      userId: "usr_default_demo",
+      title: "Handover OTP Ready",
+      message: "Your 6-digit handover code for pickup at Tech Tower Hub is 849201.",
+      type: "BOOKING",
+      isRead: false,
+      createdAt: new Date(Date.now() - 7200000).toISOString(),
+    },
+  ];
+
+  return {
+    users,
+    anonymousProfiles,
+    categories,
+    subcategories,
+    products,
+    rentalBookings: [],
+    purchaseOrders: [],
+    cartItems: [],
+    wishlistItems: [],
+    payments: [],
+    notifications,
+    relayMessages: [],
+    reviews: [
+      {
+        id: "rev_1",
+        productId: "prod_macbook_m3",
+        authorAlias: "CampusCoder-9120",
+        rating: 5,
+        comment: "Rented for 48 hours for our campus hackathon. Machine was in spotless condition, battery lasted the entire weekend. Deposit refunded to my UPI within 10 minutes of handover!",
+        createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+      },
+      {
+        id: "rev_2",
+        productId: "prod_sony_a7iv",
+        authorAlias: "FilmScholar-4301",
+        rating: 5,
+        comment: "Excellent lens and sensor quality. 4-angle proof photos made pickup and return completely transparent with zero arguments.",
+        createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+      },
+    ],
+    disputes: [],
+  };
+}
+
+class StoreManager {
+  private memoryDB: DevDB;
+  private isPostgresAvailable: boolean | null = null;
+
+  constructor() {
+    this.memoryDB = this.loadDevDB();
+  }
+
+  private loadDevDB(): DevDB {
+    try {
+      if (fs.existsSync(DEV_DB_FILE)) {
+        const raw = fs.readFileSync(DEV_DB_FILE, "utf-8");
+        return JSON.parse(raw);
+      }
+    } catch (e) {
+      console.warn("[YwD Store] Falling back to default memory database:", e);
+    }
+    const fresh = initDevDB();
+    this.saveDevDB(fresh);
+    return fresh;
+  }
+
+  private saveDevDB(db: DevDB) {
+    try {
+      fs.writeFileSync(DEV_DB_FILE, JSON.stringify(db, null, 2), "utf-8");
+    } catch (e) {
+      console.warn("[YwD Store] Could not write .dev-db.json, keeping in memory.");
+    }
+  }
+
+  public getDB(): DevDB {
+    return this.memoryDB;
+  }
+
+  public updateDB(updater: (db: DevDB) => void): DevDB {
+    updater(this.memoryDB);
+    this.saveDevDB(this.memoryDB);
+    return this.memoryDB;
+  }
+
+  public async checkPostgres(): Promise<boolean> {
+    if (this.isPostgresAvailable !== null) return this.isPostgresAvailable;
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      this.isPostgresAvailable = true;
+      console.log("[YwD DB] Connected successfully to PostgreSQL database.");
+      return true;
+    } catch {
+      this.isPostgresAvailable = false;
+      return false;
+    }
+  }
+}
+
+export const store = new StoreManager();

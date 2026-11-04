@@ -1,0 +1,413 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum EscrowStatus {
+  HELD
+  REFUNDED
+  PARTIALLY_REFUNDED
+  DEDUCTED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum NotificationType {
+  BOOKING
+  ESCROW
+  RETURN
+  ORDER
+  MESSAGE
+  SYSTEM
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?   // Private: only for administrative/verification purposes
+  email         String    @unique // Private: never exposed to other users
+  emailVerified DateTime?
+  image         String?   // Private: personal Google avatar
+  phone         String?   // Private: never shared with counterparties
+  role          Role      @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  anonymousProfile AnonymousProfile?
+  accounts         Account[]
+  sessions         Session[]
+  listings         Product[]
+  bookings         RentalBooking[]
+  purchaseOrders   PurchaseOrder[]
+  cartItems        CartItem[]
+  wishlistItems    WishlistItem[]
+  notifications    Notification[]
+  messagesSent     RelayMessage[]  @relation("SentMessages")
+  messagesReceived RelayMessage[]  @relation("ReceivedMessages")
+  disputes         Dispute[]
+
+  @@map("users")
+}
+
+model AnonymousProfile {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  alias            String   @unique // Public name, e.g. "EcoRenter-4912"
+  avatarColor      String   @default("#7052DF") // Safe neutral brand-tinted avatar
+  bio              String?  @default("Eco-conscious university renter & circular commerce participant.")
+  trustScore       Float    @default(99.0) // 0-100%
+  completedRentals Int      @default(0)
+  isVerified       Boolean  @default(true)
+  campusHub        String   @default("North Campus Central Hub • Block B")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("anonymous_profiles")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Category {
+  id          String        @id @default(cuid())
+  name        String
+  slug        String        @unique
+  description String?
+  icon        String        @default("Package")
+  count       String        @default("24+ Available")
+  order       Int           @default(0)
+  createdAt   DateTime      @default(now())
+  subcategories Subcategory[]
+  products    Product[]
+
+  @@map("categories")
+}
+
+model Subcategory {
+  id         String    @id @default(cuid())
+  categoryId String
+  category   Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name       String
+  slug       String
+  products   Product[]
+
+  @@unique([categoryId, slug])
+  @@map("subcategories")
+}
+
+model Product {
+  id                 String   @id @default(cuid())
+  title              String
+  description        String   @db.Text
+  categoryId         String
+  category           Category @relation(fields: [categoryId], references: [id])
+  subcategoryId      String?
+  subcategory        Subcategory? @relation(fields: [subcategoryId], references: [id])
+  ownerId            String
+  owner              User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  conditionGrade     String   @default("Mint (Like New)") // Mint, Good, Fair
+  rentalPriceHourly  Float?   // Hourly rate in INR
+  rentalPriceDaily   Float    // Daily rate in INR
+  rentalPriceWeekly  Float    // Weekly rate in INR
+  rentalPriceMonthly Float?   // Monthly rate in INR
+  rentalPriceSemester Float?  // Semester (90-day) rate in INR
+  buyPrice           Float?   // Outright buy price if available for recommerce
+  mrpReference       Float    // Original new MRP for comparison
+  deposit            Float    // Refundable security deposit
+  
+  isRentable         Boolean  @default(true)
+  isPurchasable      Boolean  @default(true)
+  isAvailable        Boolean  @default(true)
+  isPaused           Boolean  @default(false)
+  
+  pickupAvailable    Boolean  @default(true)
+  deliveryAvailable  Boolean  @default(true)
+  campusHub          String   @default("Central Academic Hub")
+  pickupAddress      String?
+  
+  specs              Json?    // Array of key-value pairs or structured specs
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  images             ProductImage[]
+  bookings           RentalBooking[]
+  purchaseOrders     PurchaseOrder[]
+  cartItems          CartItem[]
+  wishlistItems      WishlistItem[]
+  reviews            Review[]
+
+  @@index([categoryId])
+  @@index([ownerId])
+  @@index([isAvailable])
+  @@map("products")
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  isPrimary Boolean  @default(false)
+  publicId  String?  // Cloudinary public ID
+  createdAt DateTime @default(now())
+
+  @@map("product_images")
+}
+
+model RentalBooking {
+  id                    String        @id @default(cuid())
+  bookingNumber         String        @unique // e.g. YWD-BK-2026-7819
+  productId             String
+  product               Product       @relation(fields: [productId], references: [id])
+  renterId              String
+  renter                User          @relation(fields: [renterId], references: [id])
+  
+  startDate             DateTime
+  endDate               DateTime
+  durationTier          String        // hourly, daily, weekly, monthly, semester
+  durationUnits         Int           @default(1)
+  
+  rentAmount            Float
+  depositAmount         Float
+  deliveryFee           Float         @default(0)
+  totalAmount           Float         // rentAmount + depositAmount + deliveryFee
+  
+  status                BookingStatus @default(PENDING)
+  deliveryMethod        String        @default("PICKUP") // PICKUP or DELIVERY
+  deliveryAddress       String?
+  
+  pickupOtp             String        @default("123456") // 6-digit pickup handover code
+  returnOtp             String        @default("654321") // 6-digit return dropoff code
+  
+  conditionBeforePhotos Json?         // Array of 4 photo URLs before handover
+  conditionAfterPhotos  Json?         // Array of 4 photo URLs after return
+  damageReported        Boolean       @default(false)
+  
+  escrowStatus          EscrowStatus  @default(HELD)
+  escrowRefundAmount    Float?
+  refundUpiId           String?
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  payments              Payment[]
+  reviews               Review[]
+  disputes              Dispute[]
+
+  @@index([productId, startDate, endDate])
+  @@index([renterId])
+  @@index([status])
+  @@map("rental_bookings")
+}
+
+model PurchaseOrder {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique // e.g. YWD-ORD-2026-9041
+  buyerId         String
+  buyer           User        @relation(fields: [buyerId], references: [id])
+  productId       String
+  product         Product     @relation(fields: [productId], references: [id])
+  
+  price           Float
+  deliveryFee     Float       @default(0)
+  totalAmount     Float
+  
+  status          OrderStatus @default(PENDING)
+  deliveryAddress String
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  payments        Payment[]
+
+  @@index([buyerId])
+  @@index([status])
+  @@map("purchase_orders")
+}
+
+model CartItem {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  isRental     Boolean   @default(false)
+  durationTier String?   // hourly, daily, weekly, monthly, semester
+  startDate    DateTime?
+  endDate      DateTime?
+  quantity     Int       @default(1)
+  
+  createdAt    DateTime  @default(now())
+
+  @@unique([userId, productId, isRental])
+  @@map("cart_items")
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+  @@map("wishlist_items")
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  bookingId         String?
+  booking           RentalBooking? @relation(fields: [bookingId], references: [id])
+  orderId           String?
+  order             PurchaseOrder? @relation(fields: [orderId], references: [id])
+  
+  razorpayOrderId   String        @unique
+  razorpayPaymentId String?       @unique
+  razorpaySignature String?
+  amount            Float         // In INR
+  currency          String        @default("INR")
+  status            PaymentStatus @default(PENDING)
+  
+  refundId          String?
+  refundAmount      Float?
+  
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([status])
+  @@map("payments")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String           @db.Text
+  type      NotificationType @default(SYSTEM)
+  link      String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model RelayMessage {
+  id         String   @id @default(cuid())
+  senderId   String
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  bookingId  String?
+  content    String   @db.Text
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([senderId, receiverId])
+  @@map("relay_messages")
+}
+
+model Review {
+  id          String         @id @default(cuid())
+  productId   String
+  product     Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  bookingId   String?
+  booking     RentalBooking? @relation(fields: [bookingId], references: [id])
+  authorAlias String         // Never author's real name! e.g. "EcoRenter-4912"
+  rating      Int            // 1 to 5
+  comment     String         @db.Text
+  createdAt   DateTime       @default(now())
+
+  @@index([productId])
+  @@map("reviews")
+}
+
+model Dispute {
+  id             String        @id @default(cuid())
+  bookingId      String
+  booking        RentalBooking @relation(fields: [bookingId], references: [id])
+  initiatorId    String
+  initiator      User          @relation(fields: [initiatorId], references: [id])
+  reason         String
+  description    String        @db.Text
+  evidencePhotos Json?         // Array of image URLs
+  status         String        @default("OPEN") // OPEN, RESOLVED, DISMISSED
+  resolution     String?       @db.Text
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([bookingId])
+  @@map("disputes")
+}

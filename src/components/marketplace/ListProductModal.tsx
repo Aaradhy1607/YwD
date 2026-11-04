@@ -1,0 +1,540 @@
+"use client";
+
+import React, { useState } from "react";
+import {
+  X,
+  Upload,
+  Plus,
+  Trash2,
+  ShieldCheck,
+  Package,
+  Camera,
+  CheckCircle2,
+  Lock,
+} from "lucide-react";
+
+interface ListProductModalProps {
+  categories: any[];
+  onClose: () => void;
+  onSuccess: (newProduct: any) => void;
+}
+
+export function ListProductModal({
+  categories,
+  onClose,
+  onSuccess,
+}: ListProductModalProps) {
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [categoryId, setCategoryId] = useState(categories[0]?.id || "");
+  const [conditionGrade, setConditionGrade] = useState("Mint (Like New)");
+  const [rentalPriceDaily, setRentalPriceDaily] = useState("299");
+  const [rentalPriceWeekly, setRentalPriceWeekly] = useState("1299");
+  const [rentalPriceHourly, setRentalPriceHourly] = useState("60");
+  const [rentalPriceMonthly, setRentalPriceMonthly] = useState("3999");
+  const [rentalPriceSemester, setRentalPriceSemester] = useState("8999");
+  const [deposit, setDeposit] = useState("2500");
+  const [mrpReference, setMrpReference] = useState("24999");
+  const [isPurchasable, setIsPurchasable] = useState(false);
+  const [buyPrice, setBuyPrice] = useState("");
+  const [campusHub, setCampusHub] = useState("Central Verified Locker • Hub A");
+  const [pickupAddress, setPickupAddress] = useState("");
+  const [pickupAvailable, setPickupAvailable] = useState(true);
+  const [deliveryAvailable, setDeliveryAvailable] = useState(true);
+
+  // Images list
+  const [images, setImages] = useState<string[]>([
+    "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1000&q=80",
+  ]);
+  const [newImageUrl, setNewImageUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+
+  // Specifications
+  const [specList, setSpecList] = useState<{ key: string; value: string }[]>([
+    { key: "Brand", value: "Apple" },
+    { key: "Warranty", value: "Verified Active" },
+  ]);
+
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Cloudinary image file upload handler
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.url) {
+        setImages((prev) => [...prev, data.url]);
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleAddImageUrl = () => {
+    if (newImageUrl.trim() && newImageUrl.startsWith("http")) {
+      setImages((prev) => [...prev, newImageUrl.trim()]);
+      setNewImageUrl("");
+    }
+  };
+
+  const handleRemoveImage = (idx: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleAddSpec = () => {
+    setSpecList((prev) => [...prev, { key: "", value: "" }]);
+  };
+
+  const handleRemoveSpec = (idx: number) => {
+    setSpecList((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setErrorMsg(null);
+
+    try {
+      if (images.length === 0) {
+        throw new Error("Please add at least one product image.");
+      }
+
+      const specsObj: Record<string, string> = {};
+      specList.forEach((s) => {
+        if (s.key.trim() && s.value.trim()) {
+          specsObj[s.key.trim()] = s.value.trim();
+        }
+      });
+
+      const payload = {
+        title,
+        description,
+        categoryId: categoryId || categories[0]?.id,
+        conditionGrade,
+        rentalPriceDaily: parseFloat(rentalPriceDaily),
+        rentalPriceWeekly: parseFloat(rentalPriceWeekly),
+        rentalPriceHourly: rentalPriceHourly ? parseFloat(rentalPriceHourly) : null,
+        rentalPriceMonthly: rentalPriceMonthly ? parseFloat(rentalPriceMonthly) : null,
+        rentalPriceSemester: rentalPriceSemester ? parseFloat(rentalPriceSemester) : null,
+        mrpReference: parseFloat(mrpReference),
+        deposit: parseFloat(deposit),
+        isRentable: true,
+        isPurchasable,
+        buyPrice: isPurchasable && buyPrice ? parseFloat(buyPrice) : null,
+        campusHub,
+        pickupAddress,
+        pickupAvailable,
+        deliveryAvailable,
+        images,
+        specs: specsObj,
+      };
+
+      const res = await fetch("/api/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to create listing.");
+      }
+
+      onSuccess(data);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to save listing.");
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#202522]/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
+      <div className="bg-[#FFFFFF] w-full max-w-3xl rounded-3xl shadow-2xl border border-[#E5DEC9] overflow-hidden flex flex-col max-h-[92vh]">
+        {/* Header */}
+        <div className="bg-[#18352D] text-[#F5F0E8] px-6 py-4 flex items-center justify-between border-b border-[#2C483F] shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full overflow-hidden bg-[#FAF7F2] border border-white/20 shrink-0 shadow-xs">
+              <img src="/images/ywd-logo.png" alt="YwD Insignia" className="w-full h-full object-cover" />
+            </div>
+            <div>
+              <span className="text-xs font-mono font-semibold tracking-wide text-white block">
+                YwD // LIST EQUIPMENT PROTOCOL
+              </span>
+              <span className="text-[10px] text-[#9BB5A3]">
+                Your personal details remain 100% confidential
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-[#F5F0E8] transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Scrollable Form */}
+        <form onSubmit={handleSubmit} className="overflow-y-auto p-6 sm:p-8 space-y-6 bg-[#FFFFFF]">
+          {errorMsg && (
+            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+              {errorMsg}
+            </div>
+          )}
+
+          {/* Title & Description */}
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-semibold text-[#18352D] block mb-1.5">
+                Listing Title *
+              </label>
+              <input
+                type="text"
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g. Apple iPad Pro 11-inch M2 (128GB, Space Grey) with Apple Pencil 2"
+                className="w-full p-3 rounded-xl bg-[#FAF7F2] border border-[#E5DEC9] text-xs sm:text-sm text-[#18352D] focus:outline-none focus:border-[#18352D]"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-[#18352D] block mb-1.5">
+                Detailed Condition & Description *
+              </label>
+              <textarea
+                rows={3}
+                required
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe included accessories, cosmetic state, battery health, and recommended use cases..."
+                className="w-full p-3 rounded-xl bg-[#FAF7F2] border border-[#E5DEC9] text-xs sm:text-sm text-[#18352D] focus:outline-none focus:border-[#18352D]"
+              />
+            </div>
+          </div>
+
+          {/* Category & Condition */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-[#18352D] block mb-1.5">
+                Equipment Category *
+              </label>
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className="w-full p-3 rounded-xl bg-[#FAF7F2] border border-[#E5DEC9] text-xs sm:text-sm text-[#18352D] font-medium focus:outline-none focus:border-[#18352D]"
+              >
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-[#18352D] block mb-1.5">
+                Condition Grade *
+              </label>
+              <select
+                value={conditionGrade}
+                onChange={(e) => setConditionGrade(e.target.value)}
+                className="w-full p-3 rounded-xl bg-[#FAF7F2] border border-[#E5DEC9] text-xs sm:text-sm text-[#18352D] font-medium focus:outline-none focus:border-[#18352D]"
+              >
+                <option value="Mint (Like New)">Mint (Like New - Flawless)</option>
+                <option value="Excellent">Excellent (Minor signs of handling)</option>
+                <option value="Very Good">Very Good (Light cosmetic scuffs)</option>
+                <option value="Good">Good (Fully functional, visible wear)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Tiered Rental Pricing & Security Deposit */}
+          <div className="bg-[#FAF7F2] p-5 rounded-2xl border border-[#E5DEC9] space-y-4">
+            <h4 className="font-semibold text-xs text-[#18352D] uppercase tracking-wider">
+              Transparent Duration Rates & Escrow Deposit
+            </h4>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="text-[11px] font-medium text-[#63736A] block mb-1">
+                  Daily Rate (₹) *
+                </label>
+                <input
+                  type="number"
+                  required
+                  value={rentalPriceDaily}
+                  onChange={(e) => setRentalPriceDaily(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-medium text-[#63736A] block mb-1">
+                  Weekly Rate (₹) *
+                </label>
+                <input
+                  type="number"
+                  required
+                  value={rentalPriceWeekly}
+                  onChange={(e) => setRentalPriceWeekly(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-medium text-[#63736A] block mb-1">
+                  Hourly Rate (₹)
+                </label>
+                <input
+                  type="number"
+                  value={rentalPriceHourly}
+                  onChange={(e) => setRentalPriceHourly(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-medium text-[#63736A] block mb-1">
+                  Monthly Rate (₹)
+                </label>
+                <input
+                  type="number"
+                  value={rentalPriceMonthly}
+                  onChange={(e) => setRentalPriceMonthly(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-medium text-[#63736A] block mb-1">
+                  Semester Rate (₹)
+                </label>
+                <input
+                  type="number"
+                  value={rentalPriceSemester}
+                  onChange={(e) => setRentalPriceSemester(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-medium text-[#63736A] block mb-1">
+                  Escrow Deposit (₹) *
+                </label>
+                <input
+                  type="number"
+                  required
+                  value={deposit}
+                  onChange={(e) => setDeposit(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <div>
+                <label className="text-[11px] font-medium text-[#63736A] block mb-1">
+                  Original Retail MRP Reference (₹) *
+                </label>
+                <input
+                  type="number"
+                  required
+                  value={mrpReference}
+                  onChange={(e) => setMrpReference(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-4">
+                <input
+                  type="checkbox"
+                  id="purchasableCheck"
+                  checked={isPurchasable}
+                  onChange={(e) => setIsPurchasable(e.target.checked)}
+                  className="w-4 h-4 text-[#C46A42] rounded border-[#E5DEC9] focus:ring-[#C46A42]"
+                />
+                <label htmlFor="purchasableCheck" className="text-xs font-semibold text-[#18352D] cursor-pointer">
+                  Enable Outright Recommerce Sale Option
+                </label>
+              </div>
+            </div>
+
+            {isPurchasable && (
+              <div>
+                <label className="text-[11px] font-medium text-[#63736A] block mb-1">
+                  Outright Buy Price (₹) *
+                </label>
+                <input
+                  type="number"
+                  required={isPurchasable}
+                  value={buyPrice}
+                  onChange={(e) => setBuyPrice(e.target.value)}
+                  placeholder="e.g. 18500"
+                  className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Product Photography Section */}
+          <div className="space-y-3">
+            <label className="text-xs font-semibold text-[#18352D] block">
+              Equipment Photographs (Minimum 1 Required) *
+            </label>
+
+            <div className="flex flex-wrap gap-2.5 items-center">
+              {images.map((url, idx) => (
+                <div key={idx} className="relative w-20 h-20 rounded-xl overflow-hidden border border-[#E5DEC9] group">
+                  <img src={url} alt={`Listing upload ${idx + 1}`} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveImage(idx)}
+                    className="absolute inset-0 bg-[#202522]/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+
+              <label className="w-20 h-20 rounded-xl border-2 border-dashed border-[#E5DEC9] hover:border-[#18352D] flex flex-col items-center justify-center text-[#63736A] cursor-pointer transition-colors bg-[#FAF7F2]">
+                <Camera className="w-5 h-5 text-[#789681]" />
+                <span className="text-[10px] mt-1">Upload</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </label>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <input
+                type="text"
+                value={newImageUrl}
+                onChange={(e) => setNewImageUrl(e.target.value)}
+                placeholder="Or paste direct image URL (https://...)"
+                className="flex-1 p-2.5 rounded-xl bg-[#FAF7F2] border border-[#E5DEC9] text-xs text-[#18352D] focus:outline-none focus:border-[#18352D]"
+              />
+              <button
+                type="button"
+                onClick={handleAddImageUrl}
+                className="px-3.5 py-2 rounded-xl bg-[#18352D] text-white text-xs font-semibold hover:bg-[#234C40] transition-colors"
+              >
+                Add Link
+              </button>
+            </div>
+          </div>
+
+          {/* Specifications */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-[#18352D]">
+                Key Hardware Specifications
+              </label>
+              <button
+                type="button"
+                onClick={handleAddSpec}
+                className="text-xs font-semibold text-[#C46A42] hover:underline flex items-center gap-1"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add spec field</span>
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {specList.map((spec, idx) => (
+                <div key={idx} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={spec.key}
+                    onChange={(e) => {
+                      const updated = [...specList];
+                      updated[idx].key = e.target.value;
+                      setSpecList(updated);
+                    }}
+                    placeholder="Feature (e.g. RAM, Lens Mount)"
+                    className="flex-1 p-2 rounded-xl bg-[#FAF7F2] border border-[#E5DEC9] text-xs text-[#18352D] focus:outline-none focus:border-[#18352D]"
+                  />
+                  <input
+                    type="text"
+                    value={spec.value}
+                    onChange={(e) => {
+                      const updated = [...specList];
+                      updated[idx].value = e.target.value;
+                      setSpecList(updated);
+                    }}
+                    placeholder="Value (e.g. 16GB, Sony E-Mount)"
+                    className="flex-1 p-2 rounded-xl bg-[#FAF7F2] border border-[#E5DEC9] text-xs text-[#18352D] focus:outline-none focus:border-[#18352D]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveSpec(idx)}
+                    className="p-2 text-[#63736A] hover:text-[#A64F45]"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Handover Facility */}
+          <div>
+            <label className="text-xs font-semibold text-[#18352D] block mb-1.5">
+              Designated Handover Station *
+            </label>
+            <select
+              value={campusHub}
+              onChange={(e) => setCampusHub(e.target.value)}
+              className="w-full p-3 rounded-xl bg-[#FAF7F2] border border-[#E5DEC9] text-xs sm:text-sm text-[#18352D] font-medium focus:outline-none focus:border-[#18352D]"
+            >
+              <option value="Central Verified Locker • Hub A">Central Verified Locker • Hub A (24/7 Contactless)</option>
+              <option value="Technology & Equipment Desk • Point 1">Technology & Equipment Desk • Point 1</option>
+              <option value="Academic & Media Center Handover Point">Academic & Media Center Handover Point</option>
+              <option value="Studio & Audio Visual Collection Point">Studio & Audio Visual Collection Point</option>
+              <option value="Express Handover Bay • Zone 2">Express Handover Bay • Zone 2</option>
+            </select>
+          </div>
+
+          {/* Submit Action */}
+          <div className="pt-4 border-t border-[#E5DEC9] flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-2.5 rounded-full border border-[#E5DEC9] text-xs font-semibold text-[#63736A] hover:bg-[#FAF7F2] transition-colors"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              disabled={submitting || uploading}
+              className="px-6 py-3 rounded-full bg-[#C46A42] hover:bg-[#A8532F] disabled:opacity-50 text-white font-semibold text-xs sm:text-sm flex items-center gap-2 transition-all shadow-md active:scale-95"
+            >
+              {submitting ? (
+                <span>Publishing Listing...</span>
+              ) : (
+                <span>Publish Listing to Marketplace</span>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

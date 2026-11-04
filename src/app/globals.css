@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ywd-forest: #18352D;
+  --ywd-orange: #C46A42;
+  --ywd-terracotta: #A64F45;
+  --ywd-cream: #F5F0E8;
+  --ywd-sage: #789681;
+  --ywd-charcoal: #202522;
+  --ywd-white: #FFFFFF;
+
+  --background: #F5F0E8;
+  --foreground: #18352D;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbars matching the Warm Cream & Deep Forest palette */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: #EAE2D5;
+}
+::-webkit-scrollbar-thumb {
+  background: #A0B3A7;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #18352D;
+}
+
+/* Selection style */
+::selection {
+  background-color: #18352D;
+  color: #F5F0E8;
+}
+
+/* Lenis Smooth Scroll Rules */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
+}
+
+/* Off-screen performance optimization: pause animations when section has data-off */
+[data-off] * {
+  animation-play-state: paused !important;
+}
+
+/* Clean utility classes */
+.transition-luxury {
+  transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
