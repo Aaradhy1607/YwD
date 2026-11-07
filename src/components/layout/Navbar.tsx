@@ -40,6 +40,7 @@ interface NavbarProps {
   searchQuery?: string;
   setSearchQuery?: (q: string) => void;
   onOpenGuidedDiscovery?: () => void;
+  cosmicMode?: boolean;
 }
 
 export function Navbar({
@@ -59,6 +60,7 @@ export function Navbar({
   searchQuery = "",
   setSearchQuery,
   onOpenGuidedDiscovery,
+  cosmicMode = false,
 }: NavbarProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [localSearch, setLocalSearch] = useState(searchQuery);
@@ -113,7 +115,13 @@ export function Navbar({
   ];
 
   return (
-    <header className="sticky top-0 z-40 bg-[#FFFFFF]/95 backdrop-blur-md border-b border-[#E5DEC9] text-[#18352D] transition-colors shadow-[0_1px_3px_0_rgba(24,53,45,0.03)]">
+    <header
+      className={`sticky top-0 z-40 backdrop-blur-xl border-b transition-colors duration-500 shadow-sm ${
+        cosmicMode
+          ? "bg-[#060A08]/90 border-white/10 text-white shadow-black/60"
+          : "bg-[#FFFFFF]/95 border-[#E5DEC9] text-[#18352D] shadow-[0_1px_3px_0_rgba(24,53,45,0.03)]"
+      }`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 sm:h-[76px] flex items-center justify-between gap-4">
         {/* ========================================================
             LEFT — BRAND
@@ -125,14 +133,22 @@ export function Navbar({
             className="flex items-center gap-3 text-left group focus:outline-none py-1"
             aria-label="YwD Home"
           >
-            <div className="relative w-9 h-9 rounded-full overflow-hidden border border-[#E5DEC9] shadow-xs group-hover:scale-105 transition-transform bg-[#FAF7F2]">
+            <div
+              className={`relative w-9 h-9 rounded-full overflow-hidden border shadow-xs group-hover:scale-105 transition-transform ${
+                cosmicMode ? "border-emerald-500/30 bg-[#0A120E]" : "border-[#E5DEC9] bg-[#FAF7F2]"
+              }`}
+            >
               <img
                 src="/images/ywd-logo.png"
                 alt="YwD Insignia"
                 className="w-full h-full object-cover"
               />
             </div>
-            <span className="font-semibold text-xl tracking-tight text-[#18352D] font-sans">
+            <span
+              className={`font-semibold text-xl tracking-tight font-sans ${
+                cosmicMode ? "text-white" : "text-[#18352D]"
+              }`}
+            >
               YwD
             </span>
           </button>
@@ -154,7 +170,11 @@ export function Navbar({
                 onClick={() => setActiveScreen(item.id)}
                 className={`relative py-2 text-[13px] font-medium tracking-normal transition-colors whitespace-nowrap focus:outline-none ${
                   isActive
-                    ? "text-[#18352D] font-semibold"
+                    ? cosmicMode
+                      ? "text-emerald-400 font-semibold"
+                      : "text-[#18352D] font-semibold"
+                    : cosmicMode
+                    ? "text-white/60 hover:text-white"
                     : "text-[#63736A] hover:text-[#18352D]"
                 }`}
               >
@@ -163,7 +183,9 @@ export function Navbar({
                   <motion.div
                     layoutId="navbar-active-indicator"
                     transition={{ type: "spring", stiffness: 450, damping: 35 }}
-                    className="absolute -bottom-[21px] sm:-bottom-[20px] left-0 right-0 h-[2px] bg-[#C46A42] rounded-full"
+                    className={`absolute -bottom-[21px] sm:-bottom-[20px] left-0 right-0 h-[2px] rounded-full ${
+                      cosmicMode ? "bg-emerald-400" : "bg-[#C46A42]"
+                    }`}
                   />
                 )}
               </button>

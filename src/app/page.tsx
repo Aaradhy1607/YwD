@@ -5,6 +5,8 @@ import { motion, AnimatePresence, useScroll } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { HeroSection } from "@/components/marketplace/HeroSection";
+import { OrbitSphereHero } from "@/components/marketplace/OrbitSphereHero";
+import { InteractiveCursor } from "@/components/motion/InteractiveCursor";
 import { CategoryGrid } from "@/components/marketplace/CategoryGrid";
 import { CategoriesView } from "@/components/marketplace/CategoriesView";
 import { ProductGrid } from "@/components/marketplace/ProductGrid";
@@ -20,6 +22,7 @@ import { TrustSection } from "@/components/trust/TrustSection";
 import { AccessProtocol } from "@/components/trust/AccessProtocol";
 import { CuratedSpotlight } from "@/components/marketplace/CuratedSpotlight";
 import { SpecimenDeck } from "@/components/marketplace/SpecimenDeck";
+import { CampusTelemetryDashboard } from "@/components/marketplace/CampusTelemetryDashboard";
 import { TechnicalAnatomyInspector } from "@/components/marketplace/TechnicalAnatomyInspector";
 import { GuidedDiscoveryModal } from "@/components/marketplace/GuidedDiscoveryModal";
 import { SEED_CATEGORIES, SEED_PRODUCTS } from "@/data/seedData";
@@ -80,6 +83,10 @@ export default function YwDApp() {
   const [chatTarget, setChatTarget] = useState({ id: "usr_vendor_1", alias: "GearVault-8801" });
   const [returnBookingId, setReturnBookingId] = useState<string | null>(null);
   const [isGuidedDiscoveryOpen, setIsGuidedDiscoveryOpen] = useState(false);
+
+  // Experience & Theme Dimension States (Orbit Sphere & Internet Alchemist cosmic mode)
+  const [cosmicMode, setCosmicMode] = useState<boolean>(true);
+  const [heroView, setHeroView] = useState<"orbit" | "classic">("orbit");
 
   // Toasts
   const [toast, setToast] = useState<{ title: string; subtitle?: string } | null>(null);
@@ -264,11 +271,22 @@ export default function YwDApp() {
   const activeCategoryObj = categories.find((c) => c.slug === selectedCategory);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F5F0E8] text-[#18352D] selection:bg-[#18352D] selection:text-[#F5F0E8]">
+    <div
+      className={`min-h-screen flex flex-col transition-colors duration-1000 ${
+        cosmicMode
+          ? "bg-[#060A08] text-[#F3F4F6] selection:bg-[#10B981] selection:text-[#060A08]"
+          : "bg-[#F5F0E8] text-[#18352D] selection:bg-[#18352D] selection:text-[#F5F0E8]"
+      }`}
+    >
+      {/* Bespoke Magnetic Interactive Cursor & Subtle Celestial Dust */}
+      <InteractiveCursor mode={cosmicMode ? "cosmic" : "studio"} />
+
       {/* Sleek Top Scroll Progress Bar */}
       <motion.div
         style={{ scaleX: scrollYProgress }}
-        className="fixed top-0 left-0 right-0 h-[2.5px] bg-[#C46A42] z-50 origin-left"
+        className={`fixed top-0 left-0 right-0 h-[2.5px] z-50 origin-left ${
+          cosmicMode ? "bg-[#10B981]" : "bg-[#C46A42]"
+        }`}
       />
 
       {/* Toast popup */}
@@ -316,6 +334,7 @@ export default function YwDApp() {
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         onOpenGuidedDiscovery={() => setIsGuidedDiscoveryOpen(true)}
+        cosmicMode={cosmicMode}
       />
 
       {/* Main Content Area with Screen Transitions */}
@@ -330,33 +349,62 @@ export default function YwDApp() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              {/* Hero & Interactive Rate Calculator */}
-              <HeroSection
-                categories={categories}
-                heroProducts={allProducts.length > 0 ? allProducts : SEED_PRODUCTS}
-                selectedCategory={selectedCategory}
-                setSelectedCategory={(cat) => {
-                  setSelectedCategory(cat);
-                  setSelectedSubcategory("all");
-                  setActiveScreen("explore");
-                }}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                transactionFilter={transactionFilter}
-                setTransactionFilter={setTransactionFilter}
-                preferredDuration={preferredDuration}
-                setPreferredDuration={setPreferredDuration}
-                onExplore={() => setActiveScreen("explore")}
-                onOpenProductDetail={handleOpenDetail}
-                onOpenListProduct={() => setIsListProductOpen(true)}
-                onOpenHubModal={() => setIsHubModalOpen(true)}
-                onOpenGuidedDiscovery={() => setIsGuidedDiscoveryOpen(true)}
-              />
+              {/* Master 3D Orbit Sphere Hero & Classic Mode Switcher */}
+              {heroView === "orbit" ? (
+                <OrbitSphereHero
+                  categories={categories}
+                  heroProducts={allProducts.length > 0 ? allProducts : SEED_PRODUCTS}
+                  selectedCategory={selectedCategory}
+                  setSelectedCategory={(cat) => {
+                    setSelectedCategory(cat);
+                    setSelectedSubcategory("all");
+                    setActiveScreen("explore");
+                  }}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  transactionFilter={transactionFilter}
+                  setTransactionFilter={setTransactionFilter}
+                  preferredDuration={preferredDuration}
+                  setPreferredDuration={setPreferredDuration}
+                  onExplore={() => setActiveScreen("explore")}
+                  onOpenProductDetail={handleOpenDetail}
+                  onOpenListProduct={() => setIsListProductOpen(true)}
+                  onOpenHubModal={() => setIsHubModalOpen(true)}
+                  onOpenGuidedDiscovery={() => setIsGuidedDiscoveryOpen(true)}
+                  cosmicMode={cosmicMode}
+                  onToggleCosmicMode={() => setCosmicMode(!cosmicMode)}
+                  heroView={heroView}
+                  onToggleHeroView={setHeroView}
+                />
+              ) : (
+                <HeroSection
+                  categories={categories}
+                  heroProducts={allProducts.length > 0 ? allProducts : SEED_PRODUCTS}
+                  selectedCategory={selectedCategory}
+                  setSelectedCategory={(cat) => {
+                    setSelectedCategory(cat);
+                    setSelectedSubcategory("all");
+                    setActiveScreen("explore");
+                  }}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  transactionFilter={transactionFilter}
+                  setTransactionFilter={setTransactionFilter}
+                  preferredDuration={preferredDuration}
+                  setPreferredDuration={setPreferredDuration}
+                  onExplore={() => setActiveScreen("explore")}
+                  onOpenProductDetail={handleOpenDetail}
+                  onOpenListProduct={() => setIsListProductOpen(true)}
+                  onOpenHubModal={() => setIsHubModalOpen(true)}
+                  onOpenGuidedDiscovery={() => setIsGuidedDiscoveryOpen(true)}
+                />
+              )}
 
               {/* Tilted Archival Card Deck: 4 Field-Tested Disciplines */}
               <SpecimenDeck
                 onOpenProductDetail={handleOpenDetail}
                 onExplore={() => setActiveScreen("explore")}
+                cosmicMode={cosmicMode}
               />
 
               {/* Asymmetric Equipment Architecture */}
@@ -368,6 +416,14 @@ export default function YwDApp() {
                   setSelectedSubcategory("all");
                   setActiveScreen("explore");
                 }}
+                cosmicMode={cosmicMode}
+              />
+
+              {/* Developer Infrastructure & Campus Telemetry (fossclub.tech & Juniper Architecture) */}
+              <CampusTelemetryDashboard
+                cosmicMode={cosmicMode}
+                onExplore={() => setActiveScreen("explore")}
+                onOpenHubModal={() => setIsHubModalOpen(true)}
               />
 
               {/* Technical Anatomy: Blueprint Hardware Exploded Inspector */}
