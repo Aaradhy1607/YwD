@@ -57,6 +57,7 @@ model User {
   id            String    @id @default(cuid())
   name          String?   // Private: only for administrative/verification purposes
   email         String    @unique // Private: never exposed to other users
+  passwordHash  String?   // Hashed credentials for secure email authentication
   emailVerified DateTime?
   image         String?   // Private: personal Google avatar
   phone         String?   // Private: never shared with counterparties
@@ -410,4 +411,18 @@ model Dispute {
 
   @@index([bookingId])
   @@map("disputes")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  resource  String
+  metadata  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@map("audit_logs")
 }

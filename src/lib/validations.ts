@@ -1,5 +1,17 @@
 import { z } from "zod";
 
+export const registerSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters").max(100),
+  name: z.string().min(2, "Name must be at least 2 characters").optional(),
+  campusHub: z.string().optional(),
+});
+
+export const loginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
+});
+
 export const createProductSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters").max(120),
   description: z.string().min(20, "Description must be at least 20 characters"),
@@ -72,4 +84,22 @@ export const returnInspectionSchema = z.object({
   refundUpiId: z.string().min(3, "UPI ID is required for escrow deposit refund"),
   damageReported: z.boolean().default(false),
   damageNotes: z.string().optional(),
+});
+
+export const pickupHandoverSchema = z.object({
+  bookingId: z.string().min(1, "Booking ID is required"),
+  pickupOtp: z.string().length(6, "Pickup OTP must be 6 digits"),
+  conditionBeforePhotos: z.array(z.string().url()).optional(),
+});
+
+export const cancelBookingSchema = z.object({
+  bookingId: z.string().min(1, "Booking ID is required"),
+  reason: z.string().min(3, "Cancellation reason is required"),
+});
+
+export const createDisputeSchema = z.object({
+  bookingId: z.string().min(1, "Booking ID is required"),
+  reason: z.string().min(3, "Reason is required"),
+  description: z.string().min(10, "Detailed description is required"),
+  evidencePhotos: z.array(z.string().url()).optional(),
 });

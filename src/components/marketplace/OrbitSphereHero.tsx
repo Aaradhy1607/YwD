@@ -11,8 +11,15 @@ import {
   RotateCw,
   Eye,
   Layers,
+  X,
+  Maximize2,
+  Box,
+  Cpu,
+  Radio,
+  SlidersHorizontal,
 } from "lucide-react";
 import { formatINR } from "@/lib/pricing";
+import { ScrambleText } from "@/components/motion/ScrambleText";
 
 export interface OrbitSphereHeroProps {
   categories: any[];
@@ -36,6 +43,13 @@ export interface OrbitSphereHeroProps {
   onToggleHeroView?: (view: "orbit" | "classic") => void;
 }
 
+interface HardwarePin {
+  label: string;
+  desc: string;
+  x: number; // percentage
+  y: number; // percentage
+}
+
 interface SpecimenCardData {
   id: string;
   specimenTag: string;
@@ -53,6 +67,9 @@ interface SpecimenCardData {
     semester: number;
   };
   telemetry: string;
+  mass: string;
+  dimensions: string;
+  pins: HardwarePin[];
 }
 
 const HARDWARE_FLEET: SpecimenCardData[] = [
@@ -67,6 +84,13 @@ const HARDWARE_FLEET: SpecimenCardData[] = [
     deposit: 8000,
     rates: { hourly: 150, daily: 699, weekly: 3499, monthly: 11999, semester: 29999 },
     telemetry: "Apple M3 Max • 14-Core CPU • 36GB Unified RAM",
+    mass: "1.61 kg (3.55 lbs)",
+    dimensions: "312.6 × 221.2 × 15.5 mm",
+    pins: [
+      { label: "Liquid Retina XDR", desc: "1,600 nits peak HDR • 120Hz ProMotion panel", x: 50, y: 35 },
+      { label: "M3 Max Silicon", desc: "14-Core CPU • 30-Core GPU • Hardware Raytracing", x: 50, y: 70 },
+      { label: "MagSafe 3 & TB4", desc: "140W fast-charge • 40Gb/s PCIe transfer bus", x: 18, y: 80 },
+    ],
   },
   {
     id: "prod_sony_a7iv",
@@ -79,6 +103,13 @@ const HARDWARE_FLEET: SpecimenCardData[] = [
     deposit: 9500,
     rates: { hourly: 190, daily: 899, weekly: 4200, monthly: 14500, semester: 38000 },
     telemetry: "33MP Full-Frame Exmor R • 4K 60p 10-Bit 4:2:2",
+    mass: "658 g (Body Only)",
+    dimensions: "131.3 × 96.4 × 79.8 mm",
+    pins: [
+      { label: "33MP Exmor R CMOS", desc: "Back-illuminated sensor • 15+ stops dynamic range", x: 50, y: 45 },
+      { label: "FE 24-70mm f/2.8 GM", desc: "Constant maximum aperture • Dual XD Linear motors", x: 50, y: 75 },
+      { label: "Dual Media Slots", desc: "CFexpress Type A & SD UHS-II simultaneous recording", x: 80, y: 60 },
+    ],
   },
   {
     id: "prod_ti_nspire_cx2",
@@ -91,6 +122,12 @@ const HARDWARE_FLEET: SpecimenCardData[] = [
     deposit: 1500,
     rates: { hourly: 35, daily: 120, weekly: 450, monthly: 1200, semester: 2400 },
     telemetry: "Computer Algebra System • High-Res Color Backlit",
+    mass: "242 g",
+    dimensions: "193 × 86 × 19 mm",
+    pins: [
+      { label: "Color Backlit Display", desc: "3.2\" 320x240 pixels • High contrast 16-bit color", x: 50, y: 30 },
+      { label: "CAS Symbolic Engine", desc: "Algebraic simplification & differential equations", x: 50, y: 65 },
+    ],
   },
   {
     id: "prod_dji_avata",
@@ -103,6 +140,12 @@ const HARDWARE_FLEET: SpecimenCardData[] = [
     deposit: 7000,
     rates: { hourly: 140, daily: 650, weekly: 3100, monthly: 9800, semester: 24000 },
     telemetry: "4K 60fps Ultra-Wide FOV • Goggles 3 Included",
+    mass: "377 g",
+    dimensions: "185 × 212 × 64 mm",
+    pins: [
+      { label: "1/1.3\" CMOS Sensor", desc: "4K/60fps HDR • 155° Ultra-Wide Field of View", x: 50, y: 30 },
+      { label: "Integrated Prop Guards", desc: "Aerodynamic ducted design for indoor campus flying", x: 50, y: 70 },
+    ],
   },
   {
     id: "prod_teenage_op1",
@@ -115,6 +158,12 @@ const HARDWARE_FLEET: SpecimenCardData[] = [
     deposit: 11000,
     rates: { hourly: 180, daily: 850, weekly: 3900, monthly: 12900, semester: 32000 },
     telemetry: "Stereo 24-bit 96kHz • 4-Track Tape Emulation",
+    mass: "590 g",
+    dimensions: "288 × 102 × 29 mm",
+    pins: [
+      { label: "High-Res Color OLED", desc: "Custom graphics • Vector waveform visualization", x: 30, y: 40 },
+      { label: "CNC Aluminum Body", desc: "Anodized unibody chassis with passive radiator", x: 70, y: 60 },
+    ],
   },
   {
     id: "prod_meta_quest3",
@@ -127,6 +176,12 @@ const HARDWARE_FLEET: SpecimenCardData[] = [
     deposit: 4500,
     rates: { hourly: 90, daily: 450, weekly: 2100, monthly: 6500, semester: 16000 },
     telemetry: "4K+ InfiniteDisplay • Snapdragon XR2 Gen 2",
+    mass: "515 g",
+    dimensions: "184 × 160 × 98 mm",
+    pins: [
+      { label: "Dual RGB Passthrough", desc: "18 PPD color cameras with depth projection", x: 50, y: 40 },
+      { label: "Snapdragon XR2 Gen 2", desc: "Double the GPU graphics performance of Quest 2", x: 50, y: 70 },
+    ],
   },
   {
     id: "prod_rtx4090_rig",
@@ -139,6 +194,12 @@ const HARDWARE_FLEET: SpecimenCardData[] = [
     deposit: 15000,
     rates: { hourly: 250, daily: 1200, weekly: 5800, monthly: 19500, semester: 48000 },
     telemetry: "24GB GDDR6X • 16,384 CUDA Cores • PyTorch Ready",
+    mass: "14.2 kg (Full Tower Rig)",
+    dimensions: "520 × 240 × 510 mm",
+    pins: [
+      { label: "Ada Lovelace GPU", desc: "16,384 CUDA cores • 4th Gen Tensor Cores for LLMs", x: 50, y: 45 },
+      { label: "360mm Liquid Loop", desc: "Dual radiator push-pull silent cooling setup", x: 50, y: 20 },
+    ],
   },
   {
     id: "prod_wacom_cintiq",
@@ -151,6 +212,12 @@ const HARDWARE_FLEET: SpecimenCardData[] = [
     deposit: 8500,
     rates: { hourly: 120, daily: 580, weekly: 2700, monthly: 8900, semester: 22000 },
     telemetry: "4K 120Hz 99% DCI-P3 • Pro Pen 3 Pressure",
+    mass: "7.2 kg",
+    dimensions: "638 × 379 × 31 mm",
+    pins: [
+      { label: "4K 120Hz 10-Bit Panel", desc: "99% DCI-P3 & 98% Adobe RGB color accuracy", x: 50, y: 40 },
+      { label: "Pro Pen 3 Digitizer", desc: "8,192 pressure levels with zero-lag tilt response", x: 75, y: 65 },
+    ],
   },
   {
     id: "prod_fender_strat",
@@ -163,6 +230,12 @@ const HARDWARE_FLEET: SpecimenCardData[] = [
     deposit: 5000,
     rates: { hourly: 80, daily: 380, weekly: 1800, monthly: 5500, semester: 14000 },
     telemetry: "Ultra Noiseless Vintage Pickups • Deluxe Hardshell",
+    mass: "3.6 kg",
+    dimensions: "1000 × 330 × 50 mm",
+    pins: [
+      { label: "Ultra Noiseless Pickups", desc: "Classic bell-like chime without 60-cycle hum", x: 50, y: 55 },
+      { label: "Modern D Neck Profile", desc: "10\"-14\" compound radius rosewood fingerboard", x: 50, y: 25 },
+    ],
   },
   {
     id: "prod_sony_fx3",
@@ -175,6 +248,12 @@ const HARDWARE_FLEET: SpecimenCardData[] = [
     deposit: 12000,
     rates: { hourly: 220, daily: 999, weekly: 4800, monthly: 16000, semester: 42000 },
     telemetry: "XLR Handle Unit • Dual Base ISO 800/12800",
+    mass: "715 g",
+    dimensions: "129.7 × 77.8 × 84.5 mm",
+    pins: [
+      { label: "Internal Cooling Fan", desc: "Unlimited 4K/60p recording without thermal shutoff", x: 50, y: 40 },
+      { label: "Detachable XLR Handle", desc: "Dual XLR/TRS inputs with 4-channel 24-bit audio", x: 50, y: 20 },
+    ],
   },
   {
     id: "prod_apple_vision_pro",
@@ -187,6 +266,12 @@ const HARDWARE_FLEET: SpecimenCardData[] = [
     deposit: 18000,
     rates: { hourly: 300, daily: 1499, weekly: 6999, monthly: 24000, semester: 59000 },
     telemetry: "Micro-OLED 23 Million Pixels • visionOS 2.0",
+    mass: "600 g",
+    dimensions: "Custom Fit 3D Knitted Band",
+    pins: [
+      { label: "Dual Micro-OLED", desc: "23 million pixels • Custom 3D catadioptric lenses", x: 50, y: 40 },
+      { label: "Dual-Chip Silicon", desc: "M2 computing engine paired with real-time R1 chip", x: 50, y: 70 },
+    ],
   },
   {
     id: "prod_leica_q2",
@@ -199,6 +284,12 @@ const HARDWARE_FLEET: SpecimenCardData[] = [
     deposit: 14000,
     rates: { hourly: 210, daily: 950, weekly: 4600, monthly: 15500, semester: 39000 },
     telemetry: "Fixed Summilux 28mm f/1.7 ASPH • Weather Sealed",
+    mass: "734 g",
+    dimensions: "130 × 80 × 91.9 mm",
+    pins: [
+      { label: "Summilux 28mm f/1.7", desc: "Legendary optical formula with integrated macro mode", x: 50, y: 55 },
+      { label: "47.3MP Sensor", desc: "Full-frame sensor with crop modes up to 75mm", x: 50, y: 35 },
+    ],
   },
 ];
 
@@ -230,7 +321,11 @@ export function OrbitSphereHero({
   const [activeIdx, setActiveIdx] = useState(0);
   const [activeDuration, setActiveDuration] = useState<string>("daily");
   const [isAutoRotating, setIsAutoRotating] = useState(true);
-  const [expandedDetail, setExpandedDetail] = useState(false);
+
+  // Step 1: Cinematic 3D "Focal Pull" Zoom Pedestal State
+  const [isFocalOpen, setIsFocalOpen] = useState(false);
+  const [focalAngle, setFocalAngle] = useState<"studio" | "wireframe" | "anatomy">("studio");
+  const [activePin, setActivePin] = useState<HardwarePin | null>(null);
 
   // Rotation angles (radians)
   const [rotX, setRotX] = useState(-0.06);
@@ -256,7 +351,6 @@ export function OrbitSphereHero({
     const handleResize = () => {
       const w = window.innerWidth;
       const h = window.innerHeight;
-      // Proportional radius based on both width and height to guarantee zero clipping
       if (w < 640) setRadius(210);
       else if (w < 1024) setRadius(290);
       else if (h < 850) setRadius(330);
@@ -302,7 +396,7 @@ export function OrbitSphereHero({
     if (!mounted) return;
 
     const loop = () => {
-      if (!isDraggingRef.current) {
+      if (!isDraggingRef.current && !isFocalOpen) {
         if (isAutoRotating) {
           setRotY((prev) => prev + velocityRef.current.vx);
           setRotX((prev) => {
@@ -331,15 +425,17 @@ export function OrbitSphereHero({
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [isAutoRotating, mounted]);
+  }, [isAutoRotating, mounted, isFocalOpen]);
 
   // Pointer drag listeners for 3D trackball rotation
   const handlePointerDown = (e: React.PointerEvent) => {
+    if (isFocalOpen) return;
     isDraggingRef.current = true;
     lastMousePosRef.current = { x: e.clientX, y: e.clientY };
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
+    if (isFocalOpen) return;
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       const nx = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
@@ -400,22 +496,18 @@ export function OrbitSphereHero({
 
     return sphereNodes
       .map(({ item, index, base }) => {
-        // 1. Rotate around Y axis
         const x1 = base.x0 * cosY + base.z0 * sinY;
         const z1 = -base.x0 * sinY + base.z0 * cosY;
         const y1 = base.y0;
 
-        // 2. Rotate around X axis
         const y2 = y1 * cosX - z1 * sinX;
         const z2 = y1 * sinX + z1 * cosX;
         const x2 = x1;
 
-        // Perspective scale & depth
         const scale = perspective / (perspective - z2);
         const screenX = x2 * scale;
         const screenY = y2 * scale;
 
-        // Normalized depth in [0, 1]
         const normZ = (z2 + radius) / (2 * radius);
         const isFront = z2 > 0;
         const isActive = index === activeIdx;
@@ -483,7 +575,7 @@ export function OrbitSphereHero({
               YwD
             </div>
             <span className="text-[10px] font-mono tracking-[0.25em] uppercase opacity-75 font-semibold">
-              ORBIT // HARDWARE FLEET
+              <ScrambleText text="ORBIT // HARDWARE FLEET" duration={260} />
             </span>
           </div>
 
@@ -499,14 +591,14 @@ export function OrbitSphereHero({
 
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border text-[10px] font-mono tracking-[0.2em] uppercase backdrop-blur-md transition-colors bg-white/5 border-emerald-500/20 text-emerald-400">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Zero-Purchase Sovereignty</span>
+            <ScrambleText text="Zero-Purchase Sovereignty" duration={220} />
           </div>
         </div>
 
-        {/* Top-Right: Controls Suite (Cleaned & Consolidated) */}
+        {/* Top-Right: Controls Suite */}
         <div className="flex flex-col items-end gap-3 text-right pointer-events-auto">
           <div className="flex items-center gap-2.5 flex-wrap justify-end">
-            {/* View Switcher (Moved here to eliminate bottom overlap!) */}
+            {/* View Switcher */}
             {onToggleHeroView && (
               <div
                 className={`p-0.5 rounded-full border text-xs font-mono backdrop-blur-md flex items-center ${
@@ -573,7 +665,7 @@ export function OrbitSphereHero({
 
           <div className="font-mono text-xs tracking-widest opacity-80">
             <span className="text-base font-bold text-emerald-400">
-              {String(activeIdx + 1).padStart(2, "0")}
+              <ScrambleText text={String(activeIdx + 1).padStart(2, "0")} trigger={activeIdx} duration={150} />
             </span>
             <span className="opacity-40"> / </span>
             <span>{String(specimens.length).padStart(2, "0")}</span>
@@ -587,14 +679,17 @@ export function OrbitSphereHero({
 
       {/* ========================================================
           3D INTERACTIVE ORBIT SPHERE CANVAS STAGE
-          (Perfect true vertical center top-[50%] with no cutting off!)
          ======================================================== */}
       <motion.div
         style={{ scale: scrollScale, opacity: scrollOpacity }}
+        animate={{
+          filter: isFocalOpen ? "blur(14px) brightness(0.55)" : "blur(0px) brightness(1)",
+        }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className="absolute inset-0 flex items-center justify-center top-[50%] cursor-grab active:cursor-grabbing overflow-visible pointer-events-auto"
       >
         <div className="relative w-0 h-0 flex items-center justify-center">
-          {/* Concentric Celestial Orbit Rings in 3D Space */}
+          {/* Concentric Celestial Orbit Rings */}
           <div
             className="absolute rounded-full border border-current/15 pointer-events-none transition-opacity"
             style={{
@@ -623,11 +718,15 @@ export function OrbitSphereHero({
                   data-orbit-card
                   onClick={(e) => {
                     e.stopPropagation();
-                    focusOnNode(index);
+                    if (isActive) {
+                      setIsFocalOpen(true);
+                    } else {
+                      focusOnNode(index);
+                    }
                   }}
                   onDoubleClick={(e) => {
                     e.stopPropagation();
-                    onOpenProductDetail(item.id, "rent", activeDuration);
+                    setIsFocalOpen(true);
                   }}
                   className="absolute transform -translate-x-1/2 -translate-y-1/2 group transition-shadow duration-300 select-none will-change-transform cursor-pointer"
                   style={{
@@ -681,7 +780,7 @@ export function OrbitSphereHero({
                       </div>
                     </div>
 
-                    {/* Focus Target Crosshair Corner Accents */}
+                    {/* Active Indicator Crosshairs */}
                     {isActive && (
                       <div className="absolute inset-0 pointer-events-none border border-emerald-400/40">
                         <span className="absolute top-1 left-1 text-[8px] text-emerald-400 font-mono font-bold">+</span>
@@ -699,7 +798,7 @@ export function OrbitSphereHero({
           EDITORIAL FOOTER & CORNER SIGNATURE
          ======================================================== */}
       <div className="absolute inset-x-6 lg:inset-x-12 bottom-20 z-20 flex flex-col sm:flex-row items-end sm:items-end justify-between gap-6 pointer-events-none">
-        {/* Bottom Left: Manifesto Pill Container (Never obscures cards!) */}
+        {/* Bottom Left: Manifesto Pill Container */}
         <div className="max-w-xs sm:max-w-sm pointer-events-auto hidden md:block p-3 rounded-2xl bg-black/40 backdrop-blur-md border border-white/10 text-white/80">
           <p className="text-[11px] sm:text-xs font-sans leading-relaxed">
             From workstation compute to cinema optics, our verified campus relay turns four-figure hardware hurdles into zero-friction loans.
@@ -744,17 +843,19 @@ export function OrbitSphereHero({
             <Compass className="w-4 h-4" />
           </button>
 
-          {/* Active Specimen Chip */}
+          {/* Active Specimen Chip (Clicking triggers Step 1 Focal Pull Zoom!) */}
           <div
-            onClick={() => setExpandedDetail(!expandedDetail)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-current/10 text-xs font-mono cursor-pointer hover:border-current/30 transition-colors shrink-0"
+            onClick={() => setIsFocalOpen(true)}
+            title="Click to Zoom into 3D Focal Inspection"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-current/10 text-xs font-mono cursor-pointer hover:border-emerald-400 transition-colors shrink-0 bg-white/5"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="opacity-60">{currentSpecimen.specimenTag}</span>
             <span className="opacity-30">//</span>
             <span className="font-semibold truncate max-w-[120px] sm:max-w-[200px]">
-              {currentSpecimen.title}
+              <ScrambleText text={currentSpecimen.title} trigger={currentSpecimen.id} duration={180} />
             </span>
+            <Maximize2 className="w-3 h-3 text-emerald-400 ml-1 opacity-70" />
           </div>
 
           {/* Duration Selector Tabs */}
@@ -780,6 +881,20 @@ export function OrbitSphereHero({
             ))}
           </div>
 
+          {/* Inspect Focal Button */}
+          <button
+            type="button"
+            onClick={() => setIsFocalOpen(true)}
+            className={`hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-mono border transition-all ${
+              cosmicMode
+                ? "border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10"
+                : "border-[#18352D]/20 text-[#18352D] hover:bg-[#18352D]/5"
+            }`}
+          >
+            <Box className="w-3.5 h-3.5" />
+            <span>Inspect 3D</span>
+          </button>
+
           {/* Primary Action Button: "Launch Loan" */}
           <button
             type="button"
@@ -800,63 +915,304 @@ export function OrbitSphereHero({
       </div>
 
       {/* ========================================================
-          EXPANDABLE SPECIMEN QUICK INSPECTION DRAWER
+          STEP 1: CINEMATIC 3D "FOCAL PULL" ZOOM PEDESTAL MODAL
+          (Dual-Angle Inspection: Studio Hero ⇄ Blueprint Wireframe ⇄ Port Anatomy)
          ======================================================== */}
       <AnimatePresence>
-        {expandedDetail && (
+        {isFocalOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 30, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className={`fixed bottom-24 inset-x-4 sm:left-auto sm:right-6 sm:w-96 p-5 rounded-3xl border backdrop-blur-2xl z-40 shadow-2xl ${
-              cosmicMode ? "bg-[#0A120E]/95 border-white/20 text-white" : "bg-white/95 border-black/15 text-[#18352D]"
-            }`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 lg:p-10 bg-black/85 backdrop-blur-2xl overflow-y-auto"
           >
-            <div className="flex items-start justify-between gap-4 pb-3 border-b border-current/10">
-              <div>
-                <span className="text-[10px] font-mono tracking-widest text-emerald-400">
-                  {currentSpecimen.specimenTag} // {currentSpecimen.discipline}
-                </span>
-                <h3 className="text-base font-semibold mt-0.5">{currentSpecimen.title}</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setExpandedDetail(false)}
-                className="p-1 rounded-full hover:bg-current/10 text-xs font-mono"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="py-3 space-y-2 text-xs font-mono">
-              <div className="flex justify-between">
-                <span className="opacity-60">Condition:</span>
-                <span className="font-semibold text-emerald-400">{currentSpecimen.condition}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="opacity-60">Verified Hub:</span>
-                <span>{currentSpecimen.hub}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="opacity-60">UPI Escrow Deposit:</span>
-                <span>₹{currentSpecimen.deposit} (100% Refundable)</span>
-              </div>
-              <div className="pt-2 border-t border-current/10 text-[11px] opacity-80">
-                {currentSpecimen.telemetry}
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                setExpandedDetail(false);
-                onOpenProductDetail(currentSpecimen.id, "rent", activeDuration);
-              }}
-              className="w-full mt-2 py-2.5 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-black font-semibold text-xs flex items-center justify-center gap-2 transition-colors"
+            <motion.div
+              initial={{ scale: 0.88, y: 30, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: 20, opacity: 0 }}
+              transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+              className={`relative w-full max-w-5xl rounded-3xl border p-6 sm:p-8 lg:p-10 overflow-hidden shadow-2xl ${
+                cosmicMode
+                  ? "bg-[#0A120E] border-emerald-500/30 text-white shadow-[0_0_80px_rgba(16,185,129,0.15)]"
+                  : "bg-white border-[#E5DEC9] text-[#18352D] shadow-2xl"
+              }`}
             >
-              <span>Reserve via Verified Escrow</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+              {/* Background Coordinate Watermark */}
+              <div className="absolute right-6 top-6 text-6xl sm:text-8xl font-mono font-black opacity-5 pointer-events-none select-none">
+                {currentSpecimen.specimenTag.replace("//", "")}
+              </div>
+
+              {/* Modal Top Bar */}
+              <div className="flex items-center justify-between pb-6 border-b border-current/15 relative z-10">
+                <div className="flex items-center gap-3">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <ScrambleText
+                    text={currentSpecimen.specimenTag}
+                    trigger={`${currentSpecimen.id}-${focalAngle}`}
+                    duration={200}
+                    className="font-mono text-xs font-bold text-emerald-400 tracking-widest"
+                  />
+                  <span className="opacity-30">//</span>
+                  <ScrambleText
+                    text={currentSpecimen.discipline}
+                    trigger={`${currentSpecimen.id}-${focalAngle}`}
+                    duration={240}
+                    className="text-xs font-mono opacity-60 tracking-wider"
+                  />
+                </div>
+
+                {/* Return to Galaxy Close Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsFocalOpen(false);
+                    setActivePin(null);
+                  }}
+                  className="px-4 py-2 rounded-full border border-current/20 hover:border-emerald-400 hover:text-emerald-400 transition-all font-mono text-xs flex items-center gap-2"
+                >
+                  <span>RETURN TO ORBIT</span>
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Dual-Angle Inspection Mode Tabs */}
+              <div className="flex items-center justify-center my-6 relative z-10">
+                <div className="inline-flex items-center gap-1.5 p-1 rounded-full border border-current/15 bg-black/40 backdrop-blur-md text-xs font-mono">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFocalAngle("studio");
+                      setActivePin(null);
+                    }}
+                    className={`px-3.5 py-1.5 rounded-full transition-all flex items-center gap-1.5 ${
+                      focalAngle === "studio"
+                        ? "bg-emerald-400 text-black font-semibold shadow-xs"
+                        : "opacity-60 hover:opacity-100"
+                    }`}
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>01 // Studio Hero</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFocalAngle("wireframe");
+                      setActivePin(null);
+                    }}
+                    className={`px-3.5 py-1.5 rounded-full transition-all flex items-center gap-1.5 ${
+                      focalAngle === "wireframe"
+                        ? "bg-emerald-400 text-black font-semibold shadow-xs"
+                        : "opacity-60 hover:opacity-100"
+                    }`}
+                  >
+                    <Box className="w-3.5 h-3.5" />
+                    <span>02 // Blueprint X-Ray</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFocalAngle("anatomy");
+                      if (currentSpecimen.pins.length > 0) setActivePin(currentSpecimen.pins[0]);
+                    }}
+                    className={`px-3.5 py-1.5 rounded-full transition-all flex items-center gap-1.5 ${
+                      focalAngle === "anatomy"
+                        ? "bg-emerald-400 text-black font-semibold shadow-xs"
+                        : "opacity-60 hover:opacity-100"
+                    }`}
+                  >
+                    <Cpu className="w-3.5 h-3.5" />
+                    <span>03 // Hardware Pins</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Central Inspection Pedestal Display */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
+                {/* Visual Canvas Stage (7 Columns) */}
+                <div className="lg:col-span-7 relative aspect-[16/10] sm:aspect-[16/9] rounded-3xl overflow-hidden border border-current/20 bg-black/80 flex items-center justify-center group">
+                  {/* Studio Hero Photography */}
+                  {focalAngle === "studio" && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.96 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.35 }}
+                      className="w-full h-full relative"
+                    >
+                      <img
+                        src={currentSpecimen.image}
+                        alt={currentSpecimen.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+                      <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-[11px] font-mono text-white/90">
+                        <span className="px-2.5 py-1 rounded-md bg-black/70 backdrop-blur-md border border-white/10">
+                          CALIBRATION: GRADE A+ MINT
+                        </span>
+                        <span className="px-2.5 py-1 rounded-md bg-black/70 backdrop-blur-md text-emerald-400 border border-emerald-500/30">
+                          MONITORED SENSOR
+                        </span>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Blueprint Wireframe X-Ray Mode */}
+                  {focalAngle === "wireframe" && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.35 }}
+                      className="w-full h-full relative flex items-center justify-center bg-[#040806] overflow-hidden"
+                    >
+                      {/* Millimeter Engineering Grid */}
+                      <div className="absolute inset-0 bg-[linear-gradient(to_right,#10B981_1px,transparent_1px),linear-gradient(to_bottom,#10B981_1px,transparent_1px)] bg-[size:24px_24px] opacity-20" />
+
+                      {/* Inverted / Cybernetic Wireframe Filter */}
+                      <img
+                        src={currentSpecimen.image}
+                        alt="Wireframe Blueprint"
+                        className="w-full h-full object-cover filter invert contrast-125 opacity-40 mix-blend-screen"
+                      />
+
+                      {/* Blueprint Architectural Target Crosshairs */}
+                      <div className="absolute inset-0 pointer-events-none p-6 flex flex-col justify-between font-mono text-[10px] text-emerald-400">
+                        <div className="flex justify-between">
+                          <span>+ COORD: 34.901°N // 71.021°W</span>
+                          <span>SCALE: 1.000 // METRIC</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>TOLERANCE: ±0.05mm</span>
+                          <span>CAD_LAYER: 04_CHASSIS</span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Port & Sensor Anatomy Mode */}
+                  {focalAngle === "anatomy" && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.35 }}
+                      className="w-full h-full relative"
+                    >
+                      <img
+                        src={currentSpecimen.image}
+                        alt="Hardware Anatomy"
+                        className="w-full h-full object-cover filter brightness-75"
+                      />
+                      <div className="absolute inset-0 bg-black/40" />
+
+                      {/* Pulsing Interactive Hardware Callout Pins */}
+                      {currentSpecimen.pins.map((pin, i) => (
+                        <div
+                          key={pin.label}
+                          onClick={() => setActivePin(pin)}
+                          style={{ left: `${pin.x}%`, top: `${pin.y}%` }}
+                          className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-20 group/pin"
+                        >
+                          <span className="relative flex h-6 w-6">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-6 w-6 bg-emerald-500 text-black font-mono font-bold text-[10px] items-center justify-center shadow-lg">
+                              0{i + 1}
+                            </span>
+                          </span>
+
+                          <div className="absolute top-8 left-1/2 -translate-x-1/2 hidden group-hover/pin:block w-48 p-2 rounded-xl bg-black/90 border border-emerald-400/50 text-white text-[10px] font-mono z-30 shadow-2xl">
+                            <p className="font-bold text-emerald-400">{pin.label}</p>
+                            <p className="opacity-80 mt-0.5">{pin.desc}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </motion.div>
+                  )}
+                </div>
+
+                {/* Telemetry & Loan Details (5 Columns) */}
+                <div className="lg:col-span-5 space-y-5">
+                  <div className="space-y-2">
+                    <span className="text-[11px] font-mono text-emerald-400 uppercase tracking-widest block">
+                      ARCHIVAL SPECIMEN PROFILE
+                    </span>
+                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+                      <ScrambleText
+                        text={currentSpecimen.title}
+                        trigger={`${currentSpecimen.id}-${focalAngle}`}
+                        duration={220}
+                      />
+                    </h2>
+                    <p className="text-xs sm:text-sm opacity-75 font-mono leading-relaxed">
+                      <ScrambleText
+                        text={currentSpecimen.telemetry}
+                        trigger={currentSpecimen.id}
+                        duration={200}
+                      />
+                    </p>
+                  </div>
+
+                  {/* Physical Hardware Benchmark HUD */}
+                  <div className="p-4 rounded-2xl bg-current/5 border border-current/10 space-y-2 text-xs font-mono">
+                    <div className="flex justify-between">
+                      <span className="opacity-60">Physical Mass:</span>
+                      <span className="font-semibold text-white/95">{currentSpecimen.mass}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="opacity-60">Dimensions:</span>
+                      <span className="font-semibold text-white/95">{currentSpecimen.dimensions}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="opacity-60">Escrow Security:</span>
+                      <span className="text-emerald-400 font-semibold">100% Refundable via UPI</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="opacity-60">Dispatch Locker:</span>
+                      <span className="font-semibold text-white/95">{currentSpecimen.hub}</span>
+                    </div>
+                  </div>
+
+                  {/* Active Pin Callout Banner */}
+                  {focalAngle === "anatomy" && activePin && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 text-xs font-mono space-y-1"
+                    >
+                      <span className="text-emerald-400 font-bold">PIN TELEMETRY // {activePin.label}</span>
+                      <p className="text-white/80">{activePin.desc}</p>
+                    </motion.div>
+                  )}
+
+                  {/* Rates & Direct Action Suite */}
+                  <div className="pt-2 space-y-3">
+                    <div className="flex items-baseline justify-between">
+                      <div>
+                        <span className="text-3xl font-mono font-bold text-emerald-400">
+                          ₹{currentRate}
+                        </span>
+                        <span className="text-xs font-mono opacity-60">
+                          /{activeDuration === "semester" ? "semester" : activeDuration === "weekly" ? "week" : activeDuration === "hourly" ? "hour" : "day"}
+                        </span>
+                      </div>
+                      <span className="text-xs font-mono opacity-70">
+                        Security Deposit: ₹{currentSpecimen.deposit}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsFocalOpen(false);
+                        onOpenProductDetail(currentSpecimen.id, "rent", activeDuration);
+                      }}
+                      className="w-full py-3.5 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-400 to-emerald-500 hover:from-emerald-300 hover:to-emerald-400 text-black shadow-lg shadow-emerald-500/25 transition-all"
+                    >
+                      <span>Launch Loan via Verified Escrow</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

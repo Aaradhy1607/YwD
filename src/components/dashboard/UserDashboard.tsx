@@ -46,6 +46,47 @@ export function UserDashboard({
   onOpenListProduct,
 }: UserDashboardProps) {
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [actionFeedback, setActionFeedback] = useState<{ id: string; msg: string; type: "success" | "error" } | null>(null);
+
+  const handleVerifyHandover = async (bookingId: string, pickupOtp: string) => {
+    setActionLoadingId(bookingId);
+    try {
+      const res = await fetch("/api/bookings/handover", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId, pickupOtp }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Handover verification failed");
+      setActionFeedback({ id: bookingId, msg: "Handover verified! Rental is now active.", type: "success" });
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (err: any) {
+      setActionFeedback({ id: bookingId, msg: err.message, type: "error" });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleCancelBooking = async (bookingId: string) => {
+    if (!window.confirm("Are you sure you want to cancel this booking? Any held security deposit will be released.")) return;
+    setActionLoadingId(bookingId);
+    try {
+      const res = await fetch("/api/bookings/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId, reason: "Cancelled by user" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Cancellation failed");
+      setActionFeedback({ id: bookingId, msg: "Booking cancelled and deposit released.", type: "success" });
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (err: any) {
+      setActionFeedback({ id: bookingId, msg: err.message, type: "error" });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
 
   const tabs = [
     { id: "overview", label: "Overview", icon: Package },
@@ -278,8 +319,42 @@ export function UserDashboard({
                         </div>
                       </div>
 
-                      {/* Return Trigger */}
-                      {booking.status !== "COMPLETED" && (
+                      {/* Action Triggers */}
+                      {actionFeedback && actionFeedback.id === booking.id && (
+                        <div
+                          className={`p-2.5 rounded-xl text-xs font-medium ${
+                            actionFeedback.type === "success"
+                              ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                              : "bg-red-50 text-red-800 border border-red-200"
+                          }`}
+                        >
+                          {actionFeedback.msg}
+                        </div>
+                      )}
+
+                      {booking.status === "CONFIRMED" && (
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            disabled={actionLoadingId === booking.id}
+                            onClick={() => handleVerifyHandover(booking.id, booking.pickupOtp)}
+                            className="flex-1 py-2.5 px-3 rounded-xl bg-[#18352D] hover:bg-[#234C40] text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-xs disabled:opacity-50"
+                          >
+                            <Key className="w-3.5 h-3.5 text-[#789681]" />
+                            <span>Verify Handover</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={actionLoadingId === booking.id}
+                            onClick={() => handleCancelBooking(booking.id)}
+                            className="py-2.5 px-3 rounded-xl border border-[#E5DEC9] hover:bg-[#FAF7F2] text-[#A64F45] text-xs font-semibold transition-colors disabled:opacity-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )}
+
+                      {booking.status === "ACTIVE" && (
                         <button
                           type="button"
                           onClick={() => onOpenReturnModal(booking.id)}
@@ -288,6 +363,25 @@ export function UserDashboard({
                           <RotateCcw className="w-3.5 h-3.5 text-[#C46A42]" />
                           <span>Initiate Return & Escrow Refund</span>
                         </button>
+                      )}
+
+                      {booking.status === "COMPLETED" && (
+                        <div className="p-2.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-600 text-xs font-medium flex items-center justify-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Completed • 100% Deposit Refunded</span>
+                        </div>
+                      )}
+
+                      {booking.status === "CANCELLED" && (
+                        <div className="p-2.5 rounded-xl bg-stone-50 border border-stone-200 text-stone-500 text-xs font-medium text-center">
+                          Cancelled
+                        </div>
+                      )}
+
+                      {booking.status === "DISPUTED" && (
+                        <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium text-center">
+                          Under Dispute Mediation • Escrow Locked
+                        </div>
                       )}
                     </div>
                   ))}

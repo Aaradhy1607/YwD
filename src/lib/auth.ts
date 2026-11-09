@@ -3,21 +3,84 @@ import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { store } from "@/services/store";
 import { generateAnonymousAlias, getRandomAvatarColor } from "./privacy";
+import { verifyPassword, checkRateLimit, logAuditEvent } from "./security";
+
+const isGoogleConfigured = Boolean(
+  process.env.AUTH_GOOGLE_ID &&
+  process.env.AUTH_GOOGLE_SECRET &&
+  !process.env.AUTH_GOOGLE_ID.includes("placeholder") &&
+  !process.env.AUTH_GOOGLE_SECRET.includes("placeholder")
+);
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
-    Google({
-      clientId: process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.AUTH_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET || "",
+    ...(isGoogleConfigured
+      ? [
+          Google({
+            clientId: process.env.AUTH_GOOGLE_ID || "",
+            clientSecret: process.env.AUTH_GOOGLE_SECRET || "",
+          }),
+        ]
+      : []),
+    Credentials({
+      id: "credentials",
+      name: "Email and Password",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
+
+        const email = (credentials.email as string).toLowerCase().trim();
+        const password = credentials.password as string;
+
+        // Rate limit login attempts per email (max 5 per minute)
+        const rateLimit = checkRateLimit(`login_${email}`, 5, 60000);
+        if (!rateLimit.allowed) {
+          throw new Error("Too many login attempts. Please wait 1 minute before trying again.");
+        }
+
+        const user = store.getDB().users.find((u) => u.email === email);
+        if (!user) {
+          return null;
+        }
+
+        // If user has a passwordHash, verify cryptographically
+        if (user.passwordHash) {
+          const isValid = verifyPassword(password, user.passwordHash);
+          if (!isValid) {
+            return null;
+          }
+        } else if (password !== "demo1234" && email !== "demo@ywd.in") {
+          // Legacy or unhashed user
+          return null;
+        }
+
+        await logAuditEvent({
+          userId: user.id,
+          action: "USER_LOGIN_SUCCESS",
+          resource: "auth",
+          metadata: { email: user.email },
+        });
+
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+        };
+      },
     }),
     Credentials({
       id: "demo-login",
-      name: "Demo Account",
+      name: "Evaluation Demo Account",
       credentials: {
         email: { label: "Email", type: "email" },
       },
       async authorize(credentials) {
-        const email = (credentials?.email as string) || "demo@ywd.in";
+        const email = ((credentials?.email as string) || "demo@ywd.in").toLowerCase().trim();
         let user = store.getDB().users.find((u) => u.email === email);
 
         if (!user) {
@@ -40,6 +103,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             completedRentals: 0,
             isVerified: true,
             campusHub: "Central Logistics Hub • Locker Zone A",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
           };
 
           store.updateDB((db) => {
@@ -62,7 +127,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const userId = (token.sub as string) || "usr_default_demo";
         session.user.id = userId;
 
-        // Attach anonymous public identity
+        const dbUser = store.getDB().users.find((u) => u.id === userId);
+        (session.user as any).role = dbUser?.role || "USER";
+
+        // Attach anonymous public identity (strips PII from client)
         const profile = store.getDB().anonymousProfiles.find((p) => p.userId === userId) || {
           alias: "EcoRenter-4912",
           avatarColor: "#18352D",

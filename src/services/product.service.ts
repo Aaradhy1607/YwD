@@ -205,3 +205,75 @@ export async function toggleProductAvailability(productId: string, userId: strin
   });
   return updatedProduct ? sanitizeProductForPublic(updatedProduct) : null;
 }
+
+export async function updateProductListing(productId: string, data: any, userId: string) {
+  let updatedProduct: any = null;
+  store.updateDB((db) => {
+    const prod = db.products.find((p) => p.id === productId);
+    if (!prod) {
+      throw new Error("Product not found");
+    }
+    if (prod.ownerId !== userId) {
+      throw new Error("Unauthorized: you can only modify your own listings.");
+    }
+
+    if (data.title) prod.title = data.title;
+    if (data.description) prod.description = data.description;
+    if (data.categoryId) prod.categoryId = data.categoryId;
+    if (data.subcategoryId !== undefined) prod.subcategoryId = data.subcategoryId;
+    if (data.conditionGrade) prod.conditionGrade = data.conditionGrade;
+    if (data.rentalPriceHourly !== undefined) prod.rentalPriceHourly = data.rentalPriceHourly;
+    if (data.rentalPriceDaily !== undefined) prod.rentalPriceDaily = data.rentalPriceDaily;
+    if (data.rentalPriceWeekly !== undefined) prod.rentalPriceWeekly = data.rentalPriceWeekly;
+    if (data.rentalPriceMonthly !== undefined) prod.rentalPriceMonthly = data.rentalPriceMonthly;
+    if (data.rentalPriceSemester !== undefined) prod.rentalPriceSemester = data.rentalPriceSemester;
+    if (data.buyPrice !== undefined) prod.buyPrice = data.buyPrice;
+    if (data.deposit !== undefined) prod.deposit = data.deposit;
+    if (data.isRentable !== undefined) prod.isRentable = data.isRentable;
+    if (data.isPurchasable !== undefined) prod.isPurchasable = data.isPurchasable;
+    if (data.pickupAvailable !== undefined) prod.pickupAvailable = data.pickupAvailable;
+    if (data.deliveryAvailable !== undefined) prod.deliveryAvailable = data.deliveryAvailable;
+    if (data.campusHub) prod.campusHub = data.campusHub;
+    if (data.pickupAddress !== undefined) prod.pickupAddress = data.pickupAddress;
+    if (data.specs) prod.specs = data.specs;
+
+    if (data.images && Array.isArray(data.images) && data.images.length > 0) {
+      prod.images = data.images.map((url: string, i: number) => ({
+        id: `img_${prod.id}_${i}`,
+        url,
+        isPrimary: i === 0,
+      }));
+    }
+
+    prod.updatedAt = new Date().toISOString();
+    updatedProduct = prod;
+  });
+
+  return updatedProduct ? sanitizeProductForPublic(updatedProduct) : null;
+}
+
+export async function deleteProductListing(productId: string, userId: string) {
+  let deleted = false;
+  store.updateDB((db) => {
+    const prod = db.products.find((p) => p.id === productId);
+    if (!prod) {
+      throw new Error("Product not found");
+    }
+    if (prod.ownerId !== userId) {
+      throw new Error("Unauthorized: you can only delete your own listings.");
+    }
+
+    // Check if there are active or confirmed bookings for this item
+    const activeBooking = db.rentalBookings.find(
+      (b) => b.productId === productId && ["CONFIRMED", "ACTIVE"].includes(b.status)
+    );
+    if (activeBooking) {
+      throw new Error("Cannot delete listing with active or confirmed bookings.");
+    }
+
+    db.products = db.products.filter((p) => p.id !== productId);
+    deleted = true;
+  });
+
+  return { success: deleted, id: productId };
+}

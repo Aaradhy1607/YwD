@@ -98,6 +98,13 @@ export default function YwDApp() {
 
   // Initial data loading from API
   useEffect(() => {
+    fetch("/api/categories")
+      .then((res) => res.json())
+      .then((cats) => {
+        if (Array.isArray(cats) && cats.length > 0) setCategories(cats);
+      })
+      .catch(() => {});
+
     fetch("/api/products")
       .then((res) => res.json())
       .then((data) => {
@@ -119,6 +126,31 @@ export default function YwDApp() {
       .then((res) => res.json())
       .then((o) => {
         if (Array.isArray(o)) setOrders(o);
+      })
+      .catch(() => {});
+
+    fetch("/api/wishlist")
+      .then((res) => res.json())
+      .then((items) => {
+        if (Array.isArray(items)) {
+          setWishlistIds(items.map((w: any) => w.productId));
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/notifications")
+      .then((res) => res.json())
+      .then((notifs) => {
+        if (Array.isArray(notifs)) setNotifications(notifs);
+      })
+      .catch(() => {});
+
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.authenticated && data.user?.anonymousProfile?.alias) {
+          setUserAlias(data.user.anonymousProfile.alias);
+        }
       })
       .catch(() => {});
   }, []);

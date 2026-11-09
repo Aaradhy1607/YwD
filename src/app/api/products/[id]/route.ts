@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProductById, toggleProductAvailability } from "@/services/product.service";
+import {
+  getProductById,
+  toggleProductAvailability,
+  updateProductListing,
+  deleteProductListing,
+} from "@/services/product.service";
 import { auth } from "@/lib/auth";
 
 export async function GET(
@@ -43,5 +48,45 @@ export async function PATCH(
     return NextResponse.json(updated);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const session = await auth();
+    const userId = session?.user?.id || "usr_default_demo";
+
+    const body = await req.json();
+    const updated = await updateProductListing(id, body, userId);
+
+    return NextResponse.json(updated);
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || "Failed to update listing" },
+      { status: 400 }
+    );
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const session = await auth();
+    const userId = session?.user?.id || "usr_default_demo";
+
+    const result = await deleteProductListing(id, userId);
+    return NextResponse.json(result);
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || "Failed to delete listing" },
+      { status: 400 }
+    );
   }
 }

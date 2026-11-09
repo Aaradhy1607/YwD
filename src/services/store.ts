@@ -20,6 +20,7 @@ interface DevDB {
   relayMessages: any[];
   reviews: any[];
   disputes: any[];
+  auditLogs: any[];
 }
 
 function initDevDB(): DevDB {
@@ -180,6 +181,7 @@ function initDevDB(): DevDB {
       },
     ],
     disputes: [],
+    auditLogs: [],
   };
 }
 
@@ -195,7 +197,10 @@ class StoreManager {
     try {
       if (fs.existsSync(DEV_DB_FILE)) {
         const raw = fs.readFileSync(DEV_DB_FILE, "utf-8");
-        return JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        if (!parsed.auditLogs) parsed.auditLogs = [];
+        if (!parsed.disputes) parsed.disputes = [];
+        return parsed;
       }
     } catch (e) {
       console.warn("[YwD Store] Falling back to default memory database:", e);

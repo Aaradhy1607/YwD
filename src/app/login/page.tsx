@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   ArrowLeft,
   AlertCircle,
+  Mail,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -19,11 +20,16 @@ function LoginContent() {
   const callbackUrl = searchParams.get("callbackUrl") || "/";
   const errorParam = searchParams.get("error");
 
+  const [tab, setTab] = useState<"signin" | "register">("signin");
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [demoEmail, setDemoEmail] = useState("student@ywd.in");
   const [errorMessage, setErrorMessage] = useState<string | null>(
     errorParam ? "Authentication failed or was cancelled. Please try again." : null
   );
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
@@ -53,6 +59,56 @@ function LoginContent() {
       }
     } catch (err) {
       setErrorMessage("Demo sign-in failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      if (tab === "register") {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, name }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Registration failed");
+        }
+        setSuccessMessage("Account created! Signing you in...");
+        const loginRes = await signIn("credentials", {
+          redirect: false,
+          email,
+          password,
+          callbackUrl,
+        });
+        if (loginRes?.ok) {
+          router.push(callbackUrl);
+        } else {
+          setTab("signin");
+          setSuccessMessage("Account created! Please enter your password to sign in.");
+        }
+      } else {
+        const res = await signIn("credentials", {
+          redirect: false,
+          email,
+          password,
+          callbackUrl,
+        });
+        if (res?.ok) {
+          router.push(callbackUrl);
+        } else {
+          setErrorMessage("Invalid email or password.");
+        }
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || "Authentication failed.");
     } finally {
       setLoading(false);
     }
@@ -100,7 +156,7 @@ function LoginContent() {
               <Lock className="w-5 h-5 text-[#C46A42]" />
             </div>
             <h1 className="font-semibold text-2xl text-[#18352D] tracking-tight">
-              Sign in to YwD
+              {tab === "signin" ? "Sign in to YwD" : "Create Verified Account"}
             </h1>
             <p className="text-xs text-[#63736A] max-w-xs mx-auto leading-relaxed">
               Rent hardware for any duration, buy verified pre-owned items, and track your escrow deposits securely.
@@ -118,12 +174,106 @@ function LoginContent() {
             </p>
           </div>
 
+          {/* Tab selector */}
+          <div className="flex rounded-xl bg-[#FAF7F2] p-1 border border-[#E5DEC9] text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => { setTab("signin"); setErrorMessage(null); setSuccessMessage(null); }}
+              className={`flex-1 py-2 rounded-lg transition-all ${
+                tab === "signin" ? "bg-[#18352D] text-white shadow-xs" : "text-[#63736A] hover:text-[#18352D]"
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => { setTab("register"); setErrorMessage(null); setSuccessMessage(null); }}
+              className={`flex-1 py-2 rounded-lg transition-all ${
+                tab === "register" ? "bg-[#18352D] text-white shadow-xs" : "text-[#63736A] hover:text-[#18352D]"
+              }`}
+            >
+              Register
+            </button>
+          </div>
+
           {errorMessage && (
             <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{errorMessage}</span>
             </div>
           )}
+
+          {successMessage && (
+            <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{successMessage}</span>
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleEmailAuth} className="space-y-3">
+            {tab === "register" && (
+              <div>
+                <label className="block text-[11px] font-semibold text-[#18352D] mb-1">
+                  Full Name (Private Administrative Record)
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Siddharth Rao"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E5DEC9] text-xs text-[#18352D] focus:outline-hidden focus:border-[#18352D]"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="block text-[11px] font-semibold text-[#18352D] mb-1">
+                Email Address
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@university.edu or personal email"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#E5DEC9] text-xs text-[#18352D] focus:outline-hidden focus:border-[#18352D]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-[#18352D] mb-1">
+                Password {tab === "register" && "(Min. 8 characters)"}
+              </label>
+              <input
+                type="password"
+                required
+                minLength={tab === "register" ? 8 : 1}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#E5DEC9] text-xs text-[#18352D] focus:outline-hidden focus:border-[#18352D]"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 rounded-xl bg-[#C46A42] hover:bg-[#A8532F] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-xs disabled:opacity-50"
+            >
+              <span>{tab === "signin" ? "Sign In with Credentials" : "Create Account & Shield PII"}</span>
+            </button>
+          </form>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-[#E5DEC9]" />
+            <span className="text-[11px] font-medium text-[#63736A]">
+              Or continue with
+            </span>
+            <div className="flex-1 h-px bg-[#E5DEC9]" />
+          </div>
 
           {/* Primary Action: Google OAuth */}
           <button
@@ -153,15 +303,6 @@ function LoginContent() {
             <span>{loading ? "Connecting securely..." : "Continue with Google"}</span>
           </button>
 
-          {/* Divider */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-[#E5DEC9]" />
-            <span className="text-[11px] font-medium text-[#63736A]">
-              Evaluation mode
-            </span>
-            <div className="flex-1 h-px bg-[#E5DEC9]" />
-          </div>
-
           {/* Demo Access Button */}
           <div className="space-y-2">
             <button
@@ -171,10 +312,10 @@ function LoginContent() {
               className="w-full py-3.5 px-4 rounded-xl bg-[#18352D] hover:bg-[#234C40] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95 disabled:opacity-50"
             >
               <CheckCircle2 className="w-4 h-4 text-[#789681]" />
-              <span>Sign in as Verified Demo Member</span>
+              <span>1-Click Verified Student Sign In</span>
             </button>
             <p className="text-[10px] text-[#63736A] text-center leading-normal">
-              For testing in environments where Google OAuth credentials are not configured.
+              Quick test login as EcoRenter-4912 with full marketplace permissions.
             </p>
           </div>
         </motion.div>

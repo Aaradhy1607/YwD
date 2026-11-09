@@ -208,3 +208,110 @@ export async function processReturnInspection(params: {
 
   return updatedBooking;
 }
+
+export async function processPickupHandover(params: {
+  bookingId: string;
+  userId: string;
+  pickupOtp: string;
+  conditionBeforePhotos?: string[];
+}) {
+  let updatedBooking: any = null;
+
+  store.updateDB((db) => {
+    const booking = db.rentalBookings.find((b) => b.id === params.bookingId);
+    if (!booking) {
+      throw new Error("Booking not found.");
+    }
+
+    if (booking.renterId !== params.userId && booking.ownerId !== params.userId) {
+      throw new Error("Unauthorized: only counterparties can verify handover.");
+    }
+
+    if (booking.status !== "CONFIRMED") {
+      throw new Error(`Cannot complete handover for booking in ${booking.status} status.`);
+    }
+
+    if (booking.pickupOtp !== params.pickupOtp.trim()) {
+      throw new Error("Invalid 6-digit pickup handover OTP code.");
+    }
+
+    booking.status = "ACTIVE";
+    if (params.conditionBeforePhotos && params.conditionBeforePhotos.length > 0) {
+      booking.conditionBeforePhotos = params.conditionBeforePhotos;
+    }
+    booking.updatedAt = new Date().toISOString();
+    updatedBooking = booking;
+
+    // Dispatch in-app notification
+    db.notifications.unshift({
+      id: `notif_${Date.now()}`,
+      userId: booking.renterId,
+      title: "Equipment Handover Verified & Active",
+      message: `Pickup verified with OTP. Your rental period for ${booking.productTitle} (${booking.bookingNumber}) is now active. Return OTP: ${booking.returnOtp}`,
+      type: "BOOKING",
+      link: `/dashboard?tab=rentals`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    db.notifications.unshift({
+      id: `notif_${Date.now() + 1}`,
+      userId: booking.ownerId,
+      title: "Equipment Dispatched Successfully",
+      message: `Handover for ${booking.productTitle} completed. Item is now actively with borrower.`,
+      type: "BOOKING",
+      link: `/dashboard?tab=listings`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+  });
+
+  return updatedBooking;
+}
+
+export async function cancelRentalBooking(params: {
+  bookingId: string;
+  userId: string;
+  reason: string;
+}) {
+  let cancelledBooking: any = null;
+
+  store.updateDB((db) => {
+    const booking = db.rentalBookings.find((b) => b.id === params.bookingId);
+    if (!booking) {
+      throw new Error("Booking not found.");
+    }
+
+    if (booking.renterId !== params.userId && booking.ownerId !== params.userId) {
+      throw new Error("Unauthorized: you cannot cancel this booking.");
+    }
+
+    if (["ACTIVE", "COMPLETED", "CANCELLED", "DISPUTED"].includes(booking.status)) {
+      throw new Error(`Cannot cancel a booking that is currently ${booking.status}.`);
+    }
+
+    booking.status = "CANCELLED";
+    booking.updatedAt = new Date().toISOString();
+
+    // Auto-refund held deposit if applicable
+    if (booking.escrowStatus === "HELD") {
+      booking.escrowStatus = "REFUNDED";
+      booking.escrowRefundAmount = booking.depositAmount;
+    }
+
+    cancelledBooking = booking;
+
+    db.notifications.unshift({
+      id: `notif_${Date.now()}`,
+      userId: booking.renterId,
+      title: "Booking Cancelled",
+      message: `Booking ${booking.bookingNumber} has been cancelled. Any held escrow deposit has been released.`,
+      type: "BOOKING",
+      link: `/dashboard?tab=rentals`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+  });
+
+  return cancelledBooking;
+}
