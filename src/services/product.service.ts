@@ -119,6 +119,7 @@ export async function getProductById(id: string) {
 }
 
 export async function createProductListing(data: any, ownerId: string) {
+  store.assertProductionDatabase();
   const newId = `prod_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const categories = store.getDB().categories;
   const category = categories.find((c) => c.id === data.categoryId) || categories[0];
@@ -207,6 +208,7 @@ export async function toggleProductAvailability(productId: string, userId: strin
 }
 
 export async function updateProductListing(productId: string, data: any, userId: string) {
+  store.assertProductionDatabase();
   let updatedProduct: any = null;
   store.updateDB((db) => {
     const prod = db.products.find((p) => p.id === productId);
@@ -253,6 +255,7 @@ export async function updateProductListing(productId: string, data: any, userId:
 }
 
 export async function deleteProductListing(productId: string, userId: string) {
+  store.assertProductionDatabase();
   let deleted = false;
   store.updateDB((db) => {
     const prod = db.products.find((p) => p.id === productId);

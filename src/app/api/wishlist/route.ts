@@ -5,7 +5,10 @@ import { auth } from "@/lib/auth";
 export async function GET() {
   try {
     const session = await auth();
-    const userId = session?.user?.id || "usr_default_demo";
+    const userId = session?.user?.id || (process.env.NODE_ENV !== "production" ? "usr_default_demo" : null);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized: Authentication required." }, { status: 401 });
+    }
     const items = await getWishlist(userId);
     return NextResponse.json(items);
   } catch (error: any) {
@@ -16,7 +19,10 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
-    const userId = session?.user?.id || "usr_default_demo";
+    const userId = session?.user?.id || (process.env.NODE_ENV !== "production" ? "usr_default_demo" : null);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized: Please sign in to save items." }, { status: 401 });
+    }
     const { productId } = await req.json();
 
     if (!productId) {

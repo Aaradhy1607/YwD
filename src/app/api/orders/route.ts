@@ -6,7 +6,10 @@ import { auth } from "@/lib/auth";
 export async function GET(req: NextRequest) {
   try {
     const session = await auth();
-    const userId = session?.user?.id || "usr_default_demo";
+    const userId = session?.user?.id || (process.env.NODE_ENV !== "production" ? "usr_default_demo" : null);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized: Authentication required." }, { status: 401 });
+    }
 
     const orders = await getUserOrders(userId);
     return NextResponse.json(orders);
@@ -18,7 +21,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
-    const userId = session?.user?.id || "usr_default_demo";
+    const userId = session?.user?.id || (process.env.NODE_ENV !== "production" ? "usr_default_demo" : null);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized: Please sign in to place an order." }, { status: 401 });
+    }
 
     const body = await req.json();
     const validated = purchaseOrderSchema.parse(body);

@@ -19,6 +19,8 @@ export async function POST(req: NextRequest) {
     const validated = registerSchema.parse(body);
     const normalizedEmail = validated.email.toLowerCase().trim();
 
+    store.assertProductionDatabase();
+
     // Check if email already registered
     const existing = store.getDB().users.find((u) => u.email === normalizedEmail);
     if (existing) {

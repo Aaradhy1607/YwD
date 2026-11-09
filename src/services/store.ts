@@ -249,6 +249,11 @@ class StoreManager {
 
   public async checkPostgres(): Promise<boolean> {
     if (this.isPostgresAvailable !== null) return this.isPostgresAvailable;
+    const dbUrl = process.env.DATABASE_URL;
+    if (!dbUrl || dbUrl.includes("localhost:5432") || dbUrl.includes("placeholder")) {
+      this.isPostgresAvailable = false;
+      return false;
+    }
     try {
       await prisma.$queryRaw`SELECT 1`;
       this.isPostgresAvailable = true;
@@ -257,6 +262,16 @@ class StoreManager {
     } catch {
       this.isPostgresAvailable = false;
       return false;
+    }
+  }
+
+  public assertProductionDatabase(): void {
+    if (process.env.NODE_ENV === "production" && process.env.ALLOW_JSON_STORE_FALLBACK !== "true") {
+      if (this.isPostgresAvailable === false) {
+        throw new Error(
+          "DATABASE_UNAVAILABLE: No hosted PostgreSQL database is configured. Production requires a valid DATABASE_URL (e.g. Neon, Supabase, or AWS RDS). Ephemeral in-memory persistence is strictly prohibited in production."
+        );
+      }
     }
   }
 }

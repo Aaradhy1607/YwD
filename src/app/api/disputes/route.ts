@@ -32,6 +32,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const validated = createDisputeSchema.parse(body);
 
+    store.assertProductionDatabase();
+
     const booking = store.getDB().rentalBookings.find((b) => b.id === validated.bookingId);
     if (!booking) {
       return NextResponse.json({ error: "Associated booking not found" }, { status: 404 });

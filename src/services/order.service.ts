@@ -7,6 +7,7 @@ export interface CreatePurchaseInput {
 }
 
 export async function createPurchaseOrder(input: CreatePurchaseInput) {
+  store.assertProductionDatabase();
   const product = store.getDB().products.find((p) => p.id === input.productId);
   if (!product) {
     throw new Error("Product listing not found.");

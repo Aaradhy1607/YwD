@@ -5,7 +5,10 @@ import { auth } from "@/lib/auth";
 export async function GET() {
   try {
     const session = await auth();
-    const userId = session?.user?.id || "usr_default_demo";
+    const userId = session?.user?.id || (process.env.NODE_ENV !== "production" ? "usr_default_demo" : null);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized: Authentication required." }, { status: 401 });
+    }
     const items = await getCartItems(userId);
     return NextResponse.json(items);
   } catch (error: any) {
@@ -16,7 +19,10 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
-    const userId = session?.user?.id || "usr_default_demo";
+    const userId = session?.user?.id || (process.env.NODE_ENV !== "production" ? "usr_default_demo" : null);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized: Please sign in to add to cart." }, { status: 401 });
+    }
     const body = await req.json();
 
     const item = await addToCart({
@@ -35,7 +41,10 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const session = await auth();
-    const userId = session?.user?.id || "usr_default_demo";
+    const userId = session?.user?.id || (process.env.NODE_ENV !== "production" ? "usr_default_demo" : null);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized: Authentication required." }, { status: 401 });
+    }
     const { searchParams } = new URL(req.url);
     const cartItemId = searchParams.get("id");
 

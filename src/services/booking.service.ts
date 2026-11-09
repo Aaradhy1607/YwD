@@ -1,4 +1,5 @@
 import { store } from "./store";
+import { prisma } from "@/lib/prisma";
 import { calculateRentalPrice, DurationTier } from "@/lib/pricing";
 
 export interface CreateBookingInput {
@@ -29,6 +30,32 @@ export async function checkDateAvailability(
     return { isAvailable: false, conflictReason: "Invalid start or end date sequence." };
   }
 
+  const isPg = await store.checkPostgres();
+  if (isPg) {
+    try {
+      const overlapping = await prisma.rentalBooking.findFirst({
+        where: {
+          productId,
+          status: { in: ["CONFIRMED", "ACTIVE", "PENDING"] },
+          ...(excludeBookingId ? { id: { not: excludeBookingId } } : {}),
+          startDate: { lt: new Date(endDateStr) },
+          endDate: { gt: new Date(startDateStr) },
+        },
+      });
+      if (overlapping) {
+        return {
+          isAvailable: false,
+          conflictReason: `Item is already reserved between ${overlapping.startDate.toLocaleDateString()} and ${overlapping.endDate.toLocaleDateString()}.`,
+        };
+      }
+      return { isAvailable: true };
+    } catch (e) {
+      console.warn("[Booking Service] Postgres query failed, evaluating store fallback:", e);
+    }
+  }
+
+  store.assertProductionDatabase();
+
   const bookings = store.getDB().rentalBookings.filter(
     (b) =>
       b.productId === productId &&
@@ -53,6 +80,7 @@ export async function checkDateAvailability(
 }
 
 export async function createRentalBooking(input: CreateBookingInput) {
+  store.assertProductionDatabase();
   const product = store.getDB().products.find((p) => p.id === input.productId);
   if (!product) {
     throw new Error("Product listing not found.");
