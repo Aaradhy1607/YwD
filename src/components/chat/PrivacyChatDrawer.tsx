@@ -39,7 +39,7 @@ export function PrivacyChatDrawer({
               senderId: targetUserId,
               senderAlias: targetAlias,
               content:
-                "Hello! Welcome to YwD Relay Chat. All items are verified and ready for pickup at our secure handover locker points. How can I help you?",
+                "Hello! Welcome to YwD Relay Chat. All items are ready for pickup at our designated exchange points. How can I help you?",
               createdAt: new Date().toISOString(),
             },
           ]);
@@ -103,7 +103,7 @@ export function PrivacyChatDrawer({
     "Is this gear available for pickup today?",
     "Does it include original charger and case?",
     "Can I inspect the condition at the handover point?",
-    "I have booked this item via Escrow.",
+    "I have booked this item and confirmed deposit.",
   ];
 
   return (

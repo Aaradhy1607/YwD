@@ -48,10 +48,10 @@ export function generateBookingConfirmationEmail(bookingNumber: string, title: s
         <p style="margin: 6px 0 0; color: #9BB5A3; font-size: 13px;">Own Less. Experience More.</p>
       </div>
       <div style="padding: 24px 8px; color: #18352D;">
-        <p>Your booking <strong>${bookingNumber}</strong> has been secured in Escrow.</p>
+        <p>Your booking <strong>${bookingNumber}</strong> has been secured with a protected security deposit.</p>
         <p><strong>Item:</strong> ${title}</p>
         <p><strong>Total Paid:</strong> ${total}</p>
-        <p style="color: #C46A42; font-weight: bold;">100% of your Security Deposit is held securely in escrow and will be refunded upon return.</p>
+        <p style="color: #C46A42; font-weight: bold;">100% of your Security Deposit is safely held on platform ledger and will be refunded upon verified return inspection.</p>
         <p style="font-size: 13px; color: #63736A;">Counterparty phone numbers and real names remain strictly private. Coordinate handover through your YwD dashboard.</p>
       </div>
     </div>

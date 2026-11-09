@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import {
   createRentalBooking,
   checkDateAvailability,
@@ -6,12 +6,34 @@ import {
   processReturnInspection,
   cancelRentalBooking,
 } from "@/services/booking.service";
+import { createProductListing } from "@/services/product.service";
 import { store } from "@/services/store";
 
 describe("Rental & Booking Lifecycle Engine", () => {
-  const testProductId = "prod_macbook_m3";
+  let testProductId: string;
   const renterId = "usr_renter_test_99";
   const ownerId = "usr_vendor_1";
+
+  beforeAll(async () => {
+    const prod = await createProductListing(
+      {
+        title: "Lifecycle Test Hardware Unit",
+        description: "Test hardware unit reserved specifically for lifecycle and handover verification.",
+        categoryId: "cat_electronics",
+        conditionGrade: "Mint (Like New)",
+        rentalPriceDaily: 699,
+        rentalPriceWeekly: 3499,
+        mrpReference: 120000,
+        deposit: 8000,
+        isRentable: true,
+        isPurchasable: false,
+        campusHub: "Central Handover Point",
+        images: ["https://images.unsplash.com/photo-1517336714731-489689fd1ca8"],
+      },
+      ownerId
+    );
+    testProductId = prod.id;
+  });
 
   it("prevents self-rentals", async () => {
     const start = new Date(Date.now() + 86400000 * 20).toISOString();

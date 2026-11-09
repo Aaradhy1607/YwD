@@ -13,29 +13,29 @@ interface CampusHubModalProps {
 
 export const VERIFIED_HUBS = [
   {
-    name: "Central Verified Locker • Hub A",
-    desc: "Contactless 24/7 dual-OTP smart locker bay and certified hardware inspection station.",
-    timing: "Open 24/7 with contactless access",
+    name: "Central Handover Point • Zone 1",
+    desc: "Designated pickup counter and item condition inspection station.",
+    timing: "Open 08:00 AM – 10:00 PM Daily",
   },
   {
-    name: "Technology & Equipment Desk • Point 1",
-    desc: "Electronics and computing hardware pickup counter for laptops, cameras, and accessories.",
+    name: "Technology & Equipment Desk",
+    desc: "Electronics and computing hardware exchange point for laptops, cameras, and accessories.",
     timing: "Open 08:30 AM – 09:30 PM Daily",
   },
   {
-    name: "Academic & Media Center Handover Point",
-    desc: "Convenient verified pickup counter for study material, calculators, optics, and tools.",
+    name: "Academic Handover Desk",
+    desc: "Exchange point for books, calculators, and laboratory equipment.",
     timing: "Open 09:00 AM – 08:00 PM Mon–Sat",
   },
   {
-    name: "Studio & Audio Visual Collection Point",
-    desc: "Specialized optical and audio gear inspection desk for cinema kits and microphones.",
+    name: "Media & Studio Exchange Bay",
+    desc: "Exchange point for cameras, audio gear, and production kits.",
     timing: "Open 10:00 AM – 07:00 PM Daily",
   },
   {
-    name: "Express Handover Bay • Zone 2",
-    desc: "Rapid drop-off and pickup facility for hostel essentials and sports equipment.",
-    timing: "Open 08:00 AM – 10:00 PM Daily",
+    name: "Direct Delivery / Verified Courier",
+    desc: "Doorstep delivery directly to your verified residential address.",
+    timing: "Scheduled during checkout",
   },
 ];
 
@@ -71,7 +71,7 @@ export function CampusHubModal({
                   Select Handover Point
                 </h3>
                 <p className="text-[11px] text-[#9BB5A3]">
-                  Verified exchange stations with secure locker access
+                  Designated exchange locations for counterparty handover
                 </p>
               </div>
             </div>
@@ -98,38 +98,36 @@ export function CampusHubModal({
                   className={`p-4 rounded-xl border cursor-pointer transition-all ${
                     isSelected
                       ? "border-[#18352D] bg-[#FFFFFF] shadow-sm ring-1 ring-[#18352D]"
-                      : "border-[#E5DEC9] bg-[#FFFFFF] hover:border-[#789681]"
+                      : "border-[#E5DEC9] bg-[#FFFFFF] hover:border-[#18352D]/40"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-xs sm:text-sm text-[#18352D]">
+                        <Building className="w-3.5 h-3.5 text-[#C46A42]" />
+                        <h4 className="font-semibold text-xs sm:text-sm text-[#18352D]">
                           {hub.name}
-                        </span>
-                        {isSelected && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#18352D] text-[#F5F0E8]">
-                            Active
-                          </span>
-                        )}
+                        </h4>
                       </div>
                       <p className="text-xs text-[#63736A] leading-relaxed">
                         {hub.desc}
                       </p>
-                      <div className="flex items-center gap-1.5 text-[11px] text-[#789681] font-medium pt-1">
-                        <Building className="w-3.5 h-3.5" />
+                      <div className="flex items-center gap-1.5 pt-1 text-[11px] font-medium text-[#789681]">
+                        <ShieldCheck className="w-3.5 h-3.5" />
                         <span>{hub.timing}</span>
                       </div>
                     </div>
 
-                    <div className="shrink-0 mt-1">
-                      {isSelected ? (
-                        <div className="w-5 h-5 rounded-full bg-[#18352D] text-white flex items-center justify-center">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                        </div>
-                      ) : (
-                        <div className="w-5 h-5 rounded-full border border-[#E5DEC9]" />
-                      )}
+                    <div className="pt-0.5">
+                      <div
+                        className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                          isSelected
+                            ? "border-[#18352D] bg-[#18352D] text-white"
+                            : "border-[#E5DEC9]"
+                        }`}
+                      >
+                        {isSelected && <CheckCircle2 className="w-3.5 h-3.5" />}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -137,18 +135,18 @@ export function CampusHubModal({
             })}
           </div>
 
-          {/* Footer note */}
+          {/* Footer Info */}
           <div className="p-4 bg-[#FFFFFF] border-t border-[#E5DEC9] flex items-center justify-between text-xs text-[#63736A]">
-            <div className="flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-[#789681]" />
-              <span>Condition verification at every handover point</span>
-            </div>
+            <span>Need home delivery?</span>
             <button
               type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg bg-[#18352D] hover:bg-[#10231E] text-white font-medium text-xs transition-colors"
+              onClick={() => {
+                onSelectHub("Direct Delivery / Verified Courier");
+                onClose();
+              }}
+              className="text-[#C46A42] font-semibold hover:underline"
             >
-              Done
+              Select Courier Delivery
             </button>
           </div>
         </motion.div>

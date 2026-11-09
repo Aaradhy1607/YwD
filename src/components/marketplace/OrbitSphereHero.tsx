@@ -80,7 +80,7 @@ const HARDWARE_FLEET: SpecimenCardData[] = [
     title: "MacBook Pro 14\" M3 Max",
     image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=800&q=80",
     condition: "Mint (Grade A+)",
-    hub: "Tech Tower • Locker Bay A",
+    hub: "Technology & Equipment Desk",
     deposit: 8000,
     rates: { hourly: 150, daily: 699, weekly: 3499, monthly: 11999, semester: 29999 },
     telemetry: "Apple M3 Max • 14-Core CPU • 36GB Unified RAM",
@@ -99,7 +99,7 @@ const HARDWARE_FLEET: SpecimenCardData[] = [
     title: "Sony Alpha 7 IV + 24-70mm GM",
     image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80",
     condition: "Studio Grade A",
-    hub: "Media & Arts Studio • Bay C",
+    hub: "Media & Studio Exchange Bay",
     deposit: 9500,
     rates: { hourly: 190, daily: 899, weekly: 4200, monthly: 14500, semester: 38000 },
     telemetry: "33MP Full-Frame Exmor R • 4K 60p 10-Bit 4:2:2",
@@ -118,7 +118,7 @@ const HARDWARE_FLEET: SpecimenCardData[] = [
     title: "TI-Nspire CX II CAS Calculator",
     image: "https://images.unsplash.com/photo-1594980596870-8aa52a78d8cd?auto=format&fit=crop&w=800&q=80",
     condition: "Exam Permitted",
-    hub: "Central Library Hub • Counter 4",
+    hub: "Academic Handover Desk",
     deposit: 1500,
     rates: { hourly: 35, daily: 120, weekly: 450, monthly: 1200, semester: 2400 },
     telemetry: "Computer Algebra System • High-Res Color Backlit",
@@ -136,7 +136,7 @@ const HARDWARE_FLEET: SpecimenCardData[] = [
     title: "DJI Avata 2 Pro-View FPV Drone",
     image: "https://images.unsplash.com/photo-1527977966376-1c8408f9f108?auto=format&fit=crop&w=800&q=80",
     condition: "Cine-Ready",
-    hub: "Robotics Arena Hub • Station 02",
+    hub: "Technology & Equipment Desk",
     deposit: 7000,
     rates: { hourly: 140, daily: 650, weekly: 3100, monthly: 9800, semester: 24000 },
     telemetry: "4K 60fps Ultra-Wide FOV • Goggles 3 Included",
@@ -154,7 +154,7 @@ const HARDWARE_FLEET: SpecimenCardData[] = [
     title: "Teenage Engineering OP-1 Field",
     image: "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=800&q=80",
     condition: "Collector Grade",
-    hub: "Sound Design Lab • Hub 10",
+    hub: "Media & Studio Exchange Bay",
     deposit: 11000,
     rates: { hourly: 180, daily: 850, weekly: 3900, monthly: 12900, semester: 32000 },
     telemetry: "Stereo 24-bit 96kHz • 4-Track Tape Emulation",
@@ -1161,11 +1161,11 @@ export function OrbitSphereHero({
                       <span className="font-semibold text-white/95">{currentSpecimen.dimensions}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="opacity-60">Escrow Security:</span>
-                      <span className="text-emerald-400 font-semibold">100% Refundable via UPI</span>
+                      <span className="opacity-60">Deposit Protection:</span>
+                      <span className="text-emerald-400 font-semibold">Refundable upon Return</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="opacity-60">Dispatch Locker:</span>
+                      <span className="opacity-60">Handover Point:</span>
                       <span className="font-semibold text-white/95">{currentSpecimen.hub}</span>
                     </div>
                   </div>

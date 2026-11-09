@@ -26,12 +26,12 @@ export function Footer({ onNavigate }: { onNavigate: (screen: string) => void })
               </div>
             </div>
             <p className="text-xs text-[#9BB5A3] max-w-sm leading-relaxed">
-              College-first equipment rental and recommerce platform. Access verified gear on your exact terms—from hours to an entire semester, with automated escrow protection.
+              Flexible equipment rental and circular recommerce platform. Access quality gear on your exact terms—from hours to an entire semester, with protected security deposit handling.
             </p>
             <div className="pt-1 flex items-center gap-3">
               <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#18352D] text-[#9BB5A3] text-xs font-medium border border-[#789681]/30">
                 <ShieldCheck className="w-3.5 h-3.5 text-[#789681]" />
-                <span>100% Escrow Protection</span>
+                <span>Protected Security Deposit</span>
               </div>
               <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#18352D] text-[#9BB5A3] text-xs font-medium border border-[#789681]/30">
                 <Lock className="w-3.5 h-3.5 text-[#C46A42]" />

@@ -100,3 +100,33 @@ export function verifyWebhookSignature(body: string, signature: string): boolean
     Buffer.from(signature)
   );
 }
+
+/**
+ * Initiates a refund for an authorized/captured payment through Razorpay API.
+ * Used when a security deposit is released upon return inspection.
+ */
+export async function refundRazorpayPayment(params: {
+  paymentId: string;
+  amountInINR: number;
+  notes?: Record<string, string>;
+}) {
+  const amountInPaise = Math.round(params.amountInINR * 100);
+  if (!isRazorpayConfigured || !razorpayInstance) {
+    return {
+      id: `rfnd_dev_${Date.now()}`,
+      entity: "refund",
+      amount: amountInPaise,
+      currency: "INR",
+      payment_id: params.paymentId,
+      status: "processed",
+      isDevMock: true,
+    };
+  }
+
+  const refund = await (razorpayInstance as any).payments.refund(params.paymentId, {
+    amount: amountInPaise,
+    notes: params.notes,
+  });
+
+  return refund;
+}

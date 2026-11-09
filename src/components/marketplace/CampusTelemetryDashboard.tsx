@@ -31,7 +31,7 @@ export function CampusTelemetryDashboard({
   const [copiedCmd, setCopiedCmd] = useState(false);
   const [activeTab, setActiveTab] = useState<number>(0);
 
-  const terminalCommand = "ywd fleet verify --hub=\"Tech-Tower-Alpha\" --escrow=secured --status=live";
+  const terminalCommand = "ywd equipment verify --point=\"Central-Exchange-Point\" --deposit=protected --status=ready";
 
   const handleCopy = () => {
     navigator.clipboard.writeText(terminalCommand);
@@ -47,7 +47,7 @@ export function CampusTelemetryDashboard({
       title: "High-Performance Compute",
       description: "Apple M3 Pro/Max workstations and liquid-cooled NVIDIA RTX 4090 rigs calibrated for Machine Learning thesis runs, 4K rendering, and 48-hour hackathons.",
       stats: "48+ Workstations Ready",
-      hub: "Tech Tower • Locker Bay A",
+      hub: "Technology & Equipment Desk",
       spec: "16,384 CUDA Cores • 36GB Unified RAM",
     },
     {
@@ -57,7 +57,7 @@ export function CampusTelemetryDashboard({
       title: "Cinema Optics & Production",
       description: "Sony Alpha 7 IV and FX3 cinema packages with Sony G-Master lenses, XLR sound handles, and V90 SD cards for campus film festivals and portfolios.",
       stats: "32+ Optics Kits Online",
-      hub: "Media & Arts Studio • Bay C",
+      hub: "Media & Studio Exchange Bay",
       spec: "4K 60p 10-Bit All-Intra • Exmor R Sensor",
     },
     {
@@ -67,7 +67,7 @@ export function CampusTelemetryDashboard({
       title: "Autonomous Aerial & Robotics",
       description: "DJI Avata 2 Pro-View FPV drones with Goggles 3, LiDAR sensors, and robotics dev kits for aerial surveying and hardware engineering projects.",
       stats: "18+ Sensor Drones Active",
-      hub: "Robotics Arena • Station 02",
+      hub: "Technology & Equipment Desk",
       spec: "4K 60fps Ultra-Wide • Omnidirectional Obstacle Avoidance",
     },
     {
@@ -77,7 +77,7 @@ export function CampusTelemetryDashboard({
       title: "STEM & Academic Computing",
       description: "Texas Instruments Nspire CX II CAS graphing calculators, digital oscilloscopes, and engineering drafting gear permitted for semester finals and lab exams.",
       stats: "65+ STEM Instruments Live",
-      hub: "Central Library Hub • Counter 4",
+      hub: "Academic Handover Desk",
       spec: "Computer Algebra System • Color Backlit Display",
     },
   ];

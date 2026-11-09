@@ -140,8 +140,8 @@ export async function createRentalBooking(input: CreateBookingInput) {
     db.notifications.unshift({
       id: `notif_${Date.now()}`,
       userId: input.renterId,
-      title: "Booking Confirmed in Escrow",
-      message: `Your booking ${bookingNumber} for "${product.title}" is confirmed. Pickup OTP: ${pickupOtp}`,
+      title: "Booking Confirmed - Deposit Protected",
+      message: `Your booking ${bookingNumber} for "${product.title}" is confirmed. Pickup OTP: ${pickupOtp}. Security deposit protected on platform ledger.`,
       type: "BOOKING",
       link: `/dashboard?tab=rentals`,
       isRead: false,
@@ -197,7 +197,7 @@ export async function processReturnInspection(params: {
     db.notifications.unshift({
       id: `notif_${Date.now()}`,
       userId: booking.renterId,
-      title: "100% Escrow Deposit Refund Dispatched",
+      title: "Security Deposit Refund Initiated",
       message: `Your refundable deposit of ₹${booking.depositAmount} for ${booking.bookingNumber} has been initiated to UPI ID ${params.refundUpiId}.`,
       type: "ESCROW",
       link: `/dashboard?tab=refunds`,
@@ -305,7 +305,7 @@ export async function cancelRentalBooking(params: {
       id: `notif_${Date.now()}`,
       userId: booking.renterId,
       title: "Booking Cancelled",
-      message: `Booking ${booking.bookingNumber} has been cancelled. Any held escrow deposit has been released.`,
+      message: `Booking ${booking.bookingNumber} has been cancelled. Any held security deposit has been released.`,
       type: "BOOKING",
       link: `/dashboard?tab=rentals`,
       isRead: false,

@@ -46,7 +46,7 @@ export default function YwDApp() {
   const [transactionFilter, setTransactionFilter] = useState<"all" | "rent" | "buy">("all");
   const [preferredDuration, setPreferredDuration] = useState<string>("daily");
   const [sortBy, setSortBy] = useState<string>("featured");
-  const [selectedHub, setSelectedHub] = useState<string>("Central Verified Locker • Hub A");
+  const [selectedHub, setSelectedHub] = useState<string>("Central Handover Point • Zone 1");
 
   // User & Data states
   const [userAlias, setUserAlias] = useState("EcoRenter-4912");
@@ -56,8 +56,8 @@ export default function YwDApp() {
   const [notifications, setNotifications] = useState<any[]>([
     {
       id: "notif_escrow_1",
-      title: "Escrow Deposit Held Securely",
-      message: "Your security deposit of ₹8,000 for MacBook Pro M3 is held in automated escrow.",
+      title: "Security Deposit Protected",
+      message: "Your security deposit of ₹8,000 for MacBook Pro M3 is protected in platform ledger.",
       type: "ESCROW",
       isRead: false,
       createdAt: new Date().toISOString(),

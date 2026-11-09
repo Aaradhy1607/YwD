@@ -5,7 +5,7 @@ import { SmoothScrollProvider } from "@/components/motion/SmoothScrollProvider";
 export const metadata: Metadata = {
   title: "YwD — Own Less. Experience More. | Premium Rental & Recommerce Marketplace",
   description:
-    "YwD makes high-performance electronics, academic tools, cameras, and lifestyle equipment accessible on flexible terms—from hourly rentals to entire semesters, with secure escrow protection.",
+    "YwD makes high-performance electronics, academic tools, cameras, and lifestyle equipment accessible on flexible terms—from hourly rentals to entire semesters, with protected deposit security.",
   keywords: [
     "YwD",
     "Own Less Experience More",
@@ -14,7 +14,8 @@ export const metadata: Metadata = {
     "equipment rental",
     "macbook rental",
     "camera rental",
-    "escrow deposit",
+    "refundable deposit",
+    "deposit protection",
   ],
   icons: {
     icon: "/images/ywd-logo.png",

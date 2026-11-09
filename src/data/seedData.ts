@@ -144,7 +144,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
     isRentable: true,
     isPurchasable: true,
     isAvailable: true,
-    campusHub: "Tech Tower Hub • Ground Floor Room 12",
+    campusHub: "Technology & Equipment Desk",
     pickupAvailable: true,
     deliveryAvailable: true,
     images: [
@@ -169,7 +169,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
       avatarColor: "#18352D",
       trustScore: 99.4,
       completedRentals: 31,
-      campusHub: "Tech Tower Hub",
+      campusHub: "Technology & Equipment Desk",
     },
   },
   {
@@ -190,7 +190,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
     isRentable: true,
     isPurchasable: true,
     isAvailable: true,
-    campusHub: "Media & Arts Studio Hub • Room 204",
+    campusHub: "Media & Studio Exchange Bay",
     pickupAvailable: true,
     deliveryAvailable: true,
     images: [
@@ -214,7 +214,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
       avatarColor: "#C46A42",
       trustScore: 98.8,
       completedRentals: 47,
-      campusHub: "Media & Arts Studio Hub",
+      campusHub: "Media & Studio Exchange Bay",
     },
   },
   {
@@ -235,7 +235,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
     isRentable: true,
     isPurchasable: true,
     isAvailable: true,
-    campusHub: "Central Library Hub • Counter 4",
+    campusHub: "Academic Handover Desk",
     pickupAvailable: true,
     deliveryAvailable: false,
     images: [
@@ -258,7 +258,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
       avatarColor: "#789681",
       trustScore: 100,
       completedRentals: 18,
-      campusHub: "Central Library Hub",
+      campusHub: "Academic Handover Desk",
     },
   },
   {
@@ -279,7 +279,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
     isRentable: true,
     isPurchasable: true,
     isAvailable: true,
-    campusHub: "Metro Tech Hub • Locker Bay B",
+    campusHub: "Central Collection Point",
     pickupAvailable: true,
     deliveryAvailable: true,
     images: [
@@ -302,7 +302,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
       avatarColor: "#7052DF",
       trustScore: 97.9,
       completedRentals: 64,
-      campusHub: "Metro Tech Hub",
+      campusHub: "Central Collection Point",
     },
   },
   {
@@ -323,7 +323,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
     isRentable: true,
     isPurchasable: true,
     isAvailable: true,
-    campusHub: "City Center Hub • Handover Desk",
+    campusHub: "Central Handover Point",
     pickupAvailable: true,
     deliveryAvailable: true,
     images: [
@@ -346,7 +346,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
       avatarColor: "#2DD4BF",
       trustScore: 99.1,
       completedRentals: 28,
-      campusHub: "City Center Hub",
+      campusHub: "Central Handover Point",
     },
   },
   {
@@ -367,7 +367,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
     isRentable: true,
     isPurchasable: true,
     isAvailable: true,
-    campusHub: "Main Gate Cycle Stand Hub",
+    campusHub: "Campus Handover Point",
     pickupAvailable: true,
     deliveryAvailable: false,
     images: [
@@ -390,7 +390,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
       avatarColor: "#10B981",
       trustScore: 98.2,
       completedRentals: 39,
-      campusHub: "Main Gate Cycle Stand Hub",
+      campusHub: "Campus Handover Point",
     },
   },
   {
@@ -411,7 +411,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
     isRentable: true,
     isPurchasable: true,
     isAvailable: true,
-    campusHub: "CS Dept Study Lounge Hub",
+    campusHub: "Academic Handover Desk",
     pickupAvailable: true,
     deliveryAvailable: false,
     images: [
@@ -434,7 +434,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
       avatarColor: "#8B5CF6",
       trustScore: 99.7,
       completedRentals: 22,
-      campusHub: "CS Dept Study Lounge Hub",
+      campusHub: "Academic Handover Desk",
     },
   },
   {
@@ -455,7 +455,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
     isRentable: true,
     isPurchasable: true,
     isAvailable: true,
-    campusHub: "Hostel Zone 3 Hub",
+    campusHub: "Central Collection Point",
     pickupAvailable: true,
     deliveryAvailable: true,
     images: [
@@ -478,7 +478,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
       avatarColor: "#0D9488",
       trustScore: 98.4,
       completedRentals: 15,
-      campusHub: "Hostel Zone 3 Hub",
+      campusHub: "Central Collection Point",
     },
   },
 ];

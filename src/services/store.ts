@@ -53,7 +53,7 @@ function initDevDB(): DevDB {
       trustScore: 99.2,
       completedRentals: 19,
       isVerified: true,
-      campusHub: "Central Verified Locker • Hub A",
+      campusHub: "Central Handover Point • Zone 1",
     },
     {
       id: "prof_vendor_1",
@@ -64,7 +64,7 @@ function initDevDB(): DevDB {
       trustScore: 99.8,
       completedRentals: 62,
       isVerified: true,
-      campusHub: "Technology & Equipment Desk • Point 1",
+      campusHub: "Technology & Equipment Desk",
     },
   ];
 
@@ -132,8 +132,8 @@ function initDevDB(): DevDB {
     {
       id: "notif_1",
       userId: "usr_default_demo",
-      title: "Escrow Deposit Held Securely",
-      message: "Your security deposit is protected in YwD escrow. It will be refunded via UPI automatically upon clean return.",
+      title: "Security Deposit Protected",
+      message: "Your security deposit is protected in platform ledger. It will be released for refund upon verified return inspection.",
       type: "ESCROW",
       isRead: false,
       createdAt: new Date(Date.now() - 3600000).toISOString(),
@@ -142,7 +142,7 @@ function initDevDB(): DevDB {
       id: "notif_2",
       userId: "usr_default_demo",
       title: "Handover OTP Ready",
-      message: "Your 6-digit handover code for pickup at Tech Tower Hub is 849201.",
+      message: "Your 6-digit handover code for pickup at designated exchange point is 849201.",
       type: "BOOKING",
       isRead: false,
       createdAt: new Date(Date.now() - 7200000).toISOString(),
@@ -194,6 +194,12 @@ class StoreManager {
   }
 
   private loadDevDB(): DevDB {
+    if (process.env.NODE_ENV === "production" && process.env.ALLOW_JSON_STORE_FALLBACK !== "true") {
+      console.warn(
+        "[YwD Architecture] Production runtime detected: local JSON persistence is strictly disabled. Production workloads must use hosted PostgreSQL."
+      );
+      return initDevDB();
+    }
     try {
       if (fs.existsSync(DEV_DB_FILE)) {
         const raw = fs.readFileSync(DEV_DB_FILE, "utf-8");
@@ -211,11 +217,24 @@ class StoreManager {
   }
 
   private saveDevDB(db: DevDB) {
+    if (process.env.NODE_ENV === "production" && process.env.ALLOW_JSON_STORE_FALLBACK !== "true") {
+      // In production serverless environments (e.g. Vercel), the filesystem is read-only.
+      // Persisting to .dev-db.json in production is prohibited to prevent data loss across cold starts.
+      return;
+    }
     try {
       fs.writeFileSync(DEV_DB_FILE, JSON.stringify(db, null, 2), "utf-8");
     } catch (e) {
       console.warn("[YwD Store] Could not write .dev-db.json, keeping in memory.");
     }
+  }
+
+  public getStorageEngineMode(): "POSTGRESQL" | "LOCAL_JSON_DEV" | "PRODUCTION_UNCONFIGURED" {
+    if (this.isPostgresAvailable === true) return "POSTGRESQL";
+    if (process.env.NODE_ENV === "production" && process.env.ALLOW_JSON_STORE_FALLBACK !== "true") {
+      return "PRODUCTION_UNCONFIGURED";
+    }
+    return "LOCAL_JSON_DEV";
   }
 
   public getDB(): DevDB {

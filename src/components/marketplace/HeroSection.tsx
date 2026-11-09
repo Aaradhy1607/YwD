@@ -76,14 +76,14 @@ export function HeroSection({
       primaryImage: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1400&q=85",
       secondaryImage: "https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=800&q=80",
       condition: "Mint (Grade A+)",
-      hub: "Tech Tower Hub • Room 12",
+      hub: "Central Handover Point • Zone 1",
       deposit: 8000,
       rates: { hourly: 150, daily: 699, weekly: 3499, monthly: 11999, semester: 29999 },
       telemetry: [
         { label: "01 // DISPLAY", value: "Liquid Retina XDR • 1,600 Nits HDR" },
         { label: "02 // ARCHITECTURE", value: "Apple M3 Max • 14-Core CPU / 30-Core GPU" },
-        { label: "03 // ESCROW VAULT", value: "100% Refundable Security Deposit via UPI" },
-        { label: "04 // HANDOVER HUB", value: "Central Verified Locker • Monitored Bay A" },
+        { label: "03 // SECURITY DEPOSIT", value: "100% Refundable Security Deposit upon Return" },
+        { label: "04 // HANDOVER POINT", value: "Central Designated Handover Point" },
       ],
     },
     {
@@ -94,7 +94,7 @@ export function HeroSection({
       primaryImage: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1400&q=85",
       secondaryImage: "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?auto=format&fit=crop&w=800&q=80",
       condition: "Studio Grade A",
-      hub: "Media & Arts Studio Hub • Room 204",
+      hub: "Media & Studio Exchange Bay",
       deposit: 9500,
       rates: { hourly: 190, daily: 899, weekly: 4200, monthly: 14500, semester: 38000 },
       telemetry: [
@@ -112,14 +112,14 @@ export function HeroSection({
       primaryImage: "https://images.unsplash.com/photo-1594980596870-8aa52a78d8cd?auto=format&fit=crop&w=1400&q=85",
       secondaryImage: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=800&q=80",
       condition: "Exam Permitted",
-      hub: "Central Library Hub • Counter 4",
+      hub: "Academic Handover Desk",
       deposit: 1500,
       rates: { hourly: 35, daily: 120, weekly: 450, monthly: 1200, semester: 2400 },
       telemetry: [
         { label: "01 // ENGINE", value: "Computer Algebra System (CAS) Engine" },
         { label: "02 // CERTIFIED", value: "Permitted on AP/SAT/Engineering Finals" },
         { label: "03 // HARDWARE", value: "3.2\" 320x240 High-Res Color Backlit Panel" },
-        { label: "04 // GUARANTEE", value: "Fresh Battery Pack • Instant Locker Pickup" },
+        { label: "04 // GUARANTEE", value: "Fresh Battery Pack • Handover Point Collection" },
       ],
     },
   ];

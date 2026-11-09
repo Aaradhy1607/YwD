@@ -169,5 +169,5 @@ export async function toggleWishlist(userId: string, productId: string) {
       isSaved = true;
     }
   });
-  return { isSaved };
+  return { isSaved, wishlisted: isSaved };
 }

@@ -37,8 +37,8 @@ export function generateSecureOTP(): string {
 }
 
 /**
- * In-Memory sliding-window rate limiter for sensitive operations
- * (login attempts, registration, OTP verification).
+ * In-Memory sliding-window rate limiter with memory hygiene.
+ * Supports distributed extension via UPSTASH_REDIS_REST_URL if configured.
  */
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
@@ -48,6 +48,14 @@ export function checkRateLimit(
   windowMs: number = 60000
 ): { allowed: boolean; remaining: number; retryAfterMs: number } {
   const now = Date.now();
+
+  // Periodic eviction to prevent unbounded memory growth in production
+  if (rateLimitMap.size > 2000) {
+    for (const [k, v] of rateLimitMap.entries()) {
+      if (now > v.resetAt) rateLimitMap.delete(k);
+    }
+  }
+
   const entry = rateLimitMap.get(key);
 
   if (!entry || now > entry.resetAt) {
@@ -69,6 +77,50 @@ export function checkRateLimit(
     remaining: maxAttempts - entry.count,
     retryAfterMs: 0,
   };
+}
+
+/**
+ * Distributed rate limiter hook for multi-region serverless deployment.
+ * Uses Upstash REST API if UPSTASH_REDIS_REST_URL is configured, else falls back to memory limiter.
+ */
+export async function checkDistributedRateLimit(
+  key: string,
+  maxAttempts: number = 5,
+  windowMs: number = 60000
+): Promise<{ allowed: boolean; remaining: number; retryAfterMs: number }> {
+  const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+  const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (redisUrl && redisToken) {
+    try {
+      const windowSec = Math.ceil(windowMs / 1000);
+      const res = await fetch(`${redisUrl}/pipeline`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${redisToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify([
+          ["INCR", `rl:${key}`],
+          ["EXPIRE", `rl:${key}`, windowSec, "NX"],
+          ["TTL", `rl:${key}`],
+        ]),
+      });
+      if (res.ok) {
+        const results = await res.json();
+        const currentCount = Number(results[0]?.result || 1);
+        const ttlSec = Number(results[2]?.result || windowSec);
+        if (currentCount > maxAttempts) {
+          return { allowed: false, remaining: 0, retryAfterMs: ttlSec * 1000 };
+        }
+        return { allowed: true, remaining: Math.max(0, maxAttempts - currentCount), retryAfterMs: 0 };
+      }
+    } catch (e) {
+      console.warn("[Distributed Rate Limiter] Redis unreachable, falling back to local memory:", e);
+    }
+  }
+
+  return checkRateLimit(key, maxAttempts, windowMs);
 }
 
 /**

@@ -56,7 +56,7 @@ export function Navbar({
   onOpenHubModal,
   notifications,
   onMarkNotifRead,
-  selectedHub = "Central Verified Locker • Hub A",
+  selectedHub = "Central Handover Point • Zone 1",
   searchQuery = "",
   setSearchQuery,
   onOpenGuidedDiscovery,

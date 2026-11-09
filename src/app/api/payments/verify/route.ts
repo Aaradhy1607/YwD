@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       verified: true,
-      message: "Payment successfully verified and recorded in YwD escrow ledger.",
+      message: "Payment successfully verified and recorded in YwD platform ledger.",
     });
   } catch (error: any) {
     console.error("[Verify Payment Error]:", error);

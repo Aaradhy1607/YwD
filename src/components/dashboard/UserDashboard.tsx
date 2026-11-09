@@ -184,13 +184,13 @@ export function UserDashboard({
                     {bookings.filter((b) => ["CONFIRMED", "ACTIVE"].includes(b.status)).length}
                   </p>
                   <span className="text-xs text-[#789681] font-medium block pt-0.5">
-                    Protected by YwD Escrow Vault
+                    Protected by YwD Deposit Security
                   </span>
                 </div>
 
                 <div className="bg-[#FFFFFF] p-5 sm:p-6 rounded-xl border border-[#E5DEC9] space-y-1 shadow-xs">
                   <span className="text-xs font-medium text-[#63736A] block">
-                    Security deposit held in escrow
+                    Security deposit protected
                   </span>
                   <p className="text-2xl sm:text-3xl font-semibold text-[#C46A42] font-mono tabular-nums">
                     {formatINR(totalHeldDeposit)}
@@ -497,10 +497,10 @@ export function UserDashboard({
                 <ShieldCheck className="w-6 h-6 text-[#789681] shrink-0" />
                 <div className="text-xs space-y-0.5">
                   <strong className="text-[#18352D] block font-semibold text-sm">
-                    Automated Escrow Deposit Guarantee
+                    Protected Security Deposit Handling
                   </strong>
                   <span className="text-[#63736A] leading-relaxed block">
-                    100% of your security deposit is held in isolated cryptographic escrow throughout the rental duration. Once the 4-point return inspection is validated at dropoff, refunds are credited automatically to your UPI account.
+                    100% of your security deposit is tracked and protected separately from rental fees. Once the 4-angle return inspection is verified upon dropoff, deposit refund is initiated to your registered UPI ID.
                   </span>
                 </div>
               </div>

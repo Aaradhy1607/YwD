@@ -79,10 +79,10 @@ export function ReturnInspectionModal({
             </div>
             <div>
               <span className="text-xs font-semibold text-white block">
-                Return Inspection & Escrow Refund
+                Return Inspection & Deposit Refund
               </span>
               <span className="text-[10px] text-[#9BB5A3]">
-                Automated UPI deposit release protocol
+                Deposit return reconciliation protocol
               </span>
             </div>
           </div>
@@ -200,7 +200,7 @@ export function ReturnInspectionModal({
               {submitting ? (
                 <span>Validating & Dispatching...</span>
               ) : (
-                <span>Confirm Return & Release Escrow</span>
+                <span>Confirm Return & Release Deposit</span>
               )}
             </button>
           </div>

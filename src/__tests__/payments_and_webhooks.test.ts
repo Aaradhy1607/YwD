@@ -5,6 +5,7 @@ import {
   verifyWebhookSignature,
 } from "@/lib/razorpay";
 import { createPurchaseOrder, getUserOrders } from "@/services/order.service";
+import { createProductListing } from "@/services/product.service";
 
 describe("Payments & Purchase Orders Module", () => {
   it("creates a Razorpay order in INR converted correctly to paise", async () => {
@@ -38,11 +39,28 @@ describe("Payments & Purchase Orders Module", () => {
   });
 
   it("creates a verified recommerce purchase order separate from rental flow", async () => {
-    const buyerId = "usr_buyer_441";
-    const productId = "prod_sony_a7iv";
+    const buyerId = `usr_buyer_${Date.now()}`;
+    const testProd = await createProductListing(
+      {
+        title: "Test Purchase Optics Kit",
+        description: "Studio calibrated camera kit with 24-70mm lens in pristine condition for immediate purchase.",
+        categoryId: "cat_electronics",
+        conditionGrade: "Mint (Like New)",
+        rentalPriceDaily: 899,
+        rentalPriceWeekly: 4200,
+        mrpReference: 250000,
+        deposit: 10000,
+        isRentable: true,
+        isPurchasable: true,
+        buyPrice: 195000,
+        campusHub: "Media & Studio Exchange Bay",
+        images: ["https://images.unsplash.com/photo-1516035069371-29a1b244cc32"],
+      },
+      "usr_vendor_test_isolated"
+    );
 
     const purchase = await createPurchaseOrder({
-      productId,
+      productId: testProd.id,
       buyerId,
       deliveryAddress: "Hostel 4, Room 212, Campus North Hub",
     });

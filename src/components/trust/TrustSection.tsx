@@ -14,7 +14,7 @@ export function TrustSection() {
           Hardware security and identity confidentiality
         </h2>
         <p className="text-base text-[#63736A] mt-3 leading-relaxed">
-          How YwD safeguards hardware condition, prevents deduction disputes, and guarantees automated security deposit returns without sharing personal mobile numbers.
+          How YwD safeguards hardware condition, prevents deduction disputes, and provides reliable deposit refund reconciliation upon return verification without sharing personal contact information.
         </p>
       </div>
 
@@ -29,15 +29,15 @@ export function TrustSection() {
               Financial reserve
             </span>
             <h3 className="text-lg font-semibold text-[#18352D] tracking-tight">
-              Automated digital escrow
+              Protected Security Deposit
             </h3>
             <p className="text-xs sm:text-sm text-[#63736A] leading-relaxed">
-              100% of rental deposits are held in isolated digital escrow. Funds never reach the lender until clean return verification completes, eliminating arbitrary withholding.
+              100% of rental security deposits are tracked separately from rental charges. Deposits are never disbursed to the lender during the active rental, preventing arbitrary withholding.
             </p>
           </div>
           <div className="pt-2 border-t border-[#E5DEC9] text-xs text-[#18352D] font-medium flex items-center gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5 text-[#789681]" />
-            <span>Instant UPI return refund</span>
+            <span>Deposit refund upon return inspection</span>
           </div>
         </div>
 
@@ -51,7 +51,7 @@ export function TrustSection() {
               Inspection integrity
             </span>
             <h3 className="text-lg font-semibold text-[#18352D] tracking-tight">
-              4-Angle photographic records
+              4-Angle Photographic Records
             </h3>
             <p className="text-xs sm:text-sm text-[#63736A] leading-relaxed">
               Every handover documents cosmetic and functional condition photos across front, display, ports, and serial numbers. Timestamps prevent disputes for pre-existing marks.
@@ -59,7 +59,7 @@ export function TrustSection() {
           </div>
           <div className="pt-2 border-t border-[#E5DEC9] text-xs text-[#18352D] font-medium flex items-center gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5 text-[#789681]" />
-            <span>Cryptographic dual-OTP handshake</span>
+            <span>Server-verified dual-OTP handover</span>
           </div>
         </div>
 
@@ -73,7 +73,7 @@ export function TrustSection() {
               Identity protection
             </span>
             <h3 className="text-lg font-semibold text-[#18352D] tracking-tight">
-              Zero personal contact leakage
+              Zero Personal Contact Leakage
             </h3>
             <p className="text-xs sm:text-sm text-[#63736A] leading-relaxed">
               Coordination happens exclusively through YwD Confidential Relay using system-assigned aliases. Personal phone numbers and personal emails are never exposed.
@@ -81,7 +81,7 @@ export function TrustSection() {
           </div>
           <div className="pt-2 border-t border-[#E5DEC9] text-xs text-[#18352D] font-medium flex items-center gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5 text-[#789681]" />
-            <span>Encrypted in-app messaging</span>
+            <span>Privacy-shielded relay messaging</span>
           </div>
         </div>
       </div>
