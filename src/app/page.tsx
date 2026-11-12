@@ -28,6 +28,11 @@ import { SpecimenDeck } from "@/components/marketplace/SpecimenDeck";
 import { CampusTelemetryDashboard } from "@/components/marketplace/CampusTelemetryDashboard";
 import { TechnicalAnatomyInspector } from "@/components/marketplace/TechnicalAnatomyInspector";
 import { GuidedDiscoveryModal } from "@/components/marketplace/GuidedDiscoveryModal";
+import { ScenarioCostCalculator } from "@/components/how/ScenarioCostCalculator";
+import { HandoverInspectionSimulator } from "@/components/how/HandoverInspectionSimulator";
+import { HardwareBenchmarkExplorer } from "@/components/how/HardwareBenchmarkExplorer";
+import { CapitalFlowLedger } from "@/components/how/CapitalFlowLedger";
+import { CampusProximityRadar } from "@/components/how/CampusProximityRadar";
 import { SEED_CATEGORIES, SEED_PRODUCTS } from "@/data/seedData";
 import { CheckCircle2, X } from "lucide-react";
 
@@ -38,10 +43,15 @@ export default function YwDApp() {
   const sectionIds = useMemo(
     () => [
       "hero-section",
+      "scenario-calculator",
       "specimen-deck",
       "category-grid",
-      "campus-telemetry",
       "technical-anatomy",
+      "benchmark-explorer",
+      "campus-telemetry",
+      "handover-simulator",
+      "capital-ledger",
+      "campus-radar",
       "curated-spotlight",
       "product-inventory",
       "access-protocol",
@@ -473,6 +483,14 @@ export default function YwDApp() {
                 )}
               </div>
 
+              {/* HOW FACTOR 01: Project Scenario Feasibility & Upfront Capital Preserved Calculator */}
+              <div id="scenario-calculator">
+                <ScenarioCostCalculator
+                  cosmicMode={cosmicMode}
+                  onOpenProductDetail={handleOpenDetail}
+                />
+              </div>
+
               {/* Tilted Archival Card Deck: 4 Field-Tested Disciplines */}
               <div id="specimen-deck">
                 <SpecimenDeck
@@ -496,7 +514,19 @@ export default function YwDApp() {
                 />
               </div>
 
-              {/* Developer Infrastructure & Campus Telemetry (fossclub.tech & Juniper Architecture) */}
+              {/* Technical Anatomy: Blueprint Hardware Exploded Inspector with Live 3D Stack */}
+              <div id="technical-anatomy">
+                <TechnicalAnatomyInspector
+                  onOpenProductDetail={handleOpenDetail}
+                />
+              </div>
+
+              {/* HOW FACTOR 03: Real-World Assignment Benchmark Explorer */}
+              <div id="benchmark-explorer">
+                <HardwareBenchmarkExplorer cosmicMode={cosmicMode} />
+              </div>
+
+              {/* Developer Infrastructure & Campus Telemetry */}
               <div id="campus-telemetry">
                 <CampusTelemetryDashboard
                   cosmicMode={cosmicMode}
@@ -505,10 +535,22 @@ export default function YwDApp() {
                 />
               </div>
 
-              {/* Technical Anatomy: Blueprint Hardware Exploded Inspector */}
-              <div id="technical-anatomy">
-                <TechnicalAnatomyInspector
-                  onOpenProductDetail={handleOpenDetail}
+              {/* HOW FACTOR 02: 15-Second Handover & 4-Angle Photo Inspection Simulator */}
+              <div id="handover-simulator">
+                <HandoverInspectionSimulator cosmicMode={cosmicMode} />
+              </div>
+
+              {/* HOW FACTOR 04: The Transparent Capital Flow & Instant UPI Refund Ledger */}
+              <div id="capital-ledger">
+                <CapitalFlowLedger cosmicMode={cosmicMode} />
+              </div>
+
+              {/* HOW FACTOR 05: Campus Hub Proximity & Live Availability Radar */}
+              <div id="campus-radar">
+                <CampusProximityRadar
+                  cosmicMode={cosmicMode}
+                  onOpenHubModal={() => setIsHubModalOpen(true)}
+                  onExplore={() => setActiveScreen("explore")}
                 />
               </div>
 
