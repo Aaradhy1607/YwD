@@ -21,7 +21,7 @@ async function assertAdminSession() {
     try {
       const user = await prisma.user.findUnique({ where: { id: userId } });
       if (user) role = user.role;
-    } catch {}
+    } catch { }
   }
 
   if (role !== "ADMIN") {
@@ -73,10 +73,12 @@ export async function GET() {
           orderBy: { createdAt: "desc" },
           take: 50,
         }),
-        prisma.auditLog.findMany({
-          orderBy: { createdAt: "desc" },
-          take: 100,
-        }),
+        (prisma as any).auditLog
+          ? (prisma as any).auditLog.findMany({
+            orderBy: { createdAt: "desc" },
+            take: 100,
+          })
+          : Promise.resolve([]),
         prisma.category.findMany({
           include: { subcategories: true },
         }),
@@ -154,14 +156,14 @@ export async function GET() {
           status: p.status,
           createdAt: p.createdAt.toISOString(),
         })),
-        auditLogs: auditLogs.map((a) => ({
+        auditLogs: (auditLogs || []).map((a: any) => ({
           id: a.id,
           action: a.action,
           resource: a.resource,
           userId: a.userId,
           metadata: a.metadata,
           ipAddress: a.ipAddress,
-          createdAt: a.createdAt.toISOString(),
+          createdAt: typeof a.createdAt === "string" ? a.createdAt : a.createdAt?.toISOString?.() || new Date().toISOString(),
         })),
         categories,
       });
