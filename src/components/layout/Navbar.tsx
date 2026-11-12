@@ -167,7 +167,13 @@ export function Navbar({
               <button
                 key={item.id}
                 type="button"
-                onClick={() => setActiveScreen(item.id)}
+                onClick={() => {
+                  if (item.id === "trust" && activeScreen === "home") {
+                    document.getElementById("scenario-calculator")?.scrollIntoView({ behavior: "smooth" });
+                  } else {
+                    setActiveScreen(item.id);
+                  }
+                }}
                 className={`relative py-2 text-[13px] font-medium tracking-normal transition-colors whitespace-nowrap focus:outline-none ${
                   isActive
                     ? cosmicMode

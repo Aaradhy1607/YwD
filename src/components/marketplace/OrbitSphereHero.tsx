@@ -593,6 +593,50 @@ export function OrbitSphereHero({
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             <ScrambleText text="Zero-Purchase Sovereignty" duration={220} />
           </div>
+
+          {/* Quick-Jump Reality Suite: 5 "How Factor" Direct Anchors */}
+          <div className="pt-2 flex flex-wrap gap-1.5 text-[11px] font-mono pointer-events-auto">
+            <button
+              type="button"
+              onClick={() => document.getElementById("scenario-calculator")?.scrollIntoView({ behavior: "smooth" })}
+              className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 transition-all flex items-center gap-1 shadow-sm"
+            >
+              <span>01 // Save 98% Math</span>
+              <ArrowRight className="w-3 h-3 opacity-60" />
+            </button>
+            <button
+              type="button"
+              onClick={() => document.getElementById("handover-simulator")?.scrollIntoView({ behavior: "smooth" })}
+              className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 border border-white/10 transition-all flex items-center gap-1"
+            >
+              <span>02 // 4-Angle HUD</span>
+              <ArrowRight className="w-3 h-3 opacity-60" />
+            </button>
+            <button
+              type="button"
+              onClick={() => document.getElementById("benchmark-explorer")?.scrollIntoView({ behavior: "smooth" })}
+              className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 border border-white/10 transition-all flex items-center gap-1"
+            >
+              <span>03 // LLM Benchmarks</span>
+              <ArrowRight className="w-3 h-3 opacity-60" />
+            </button>
+            <button
+              type="button"
+              onClick={() => document.getElementById("capital-ledger")?.scrollIntoView({ behavior: "smooth" })}
+              className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 border border-white/10 transition-all flex items-center gap-1"
+            >
+              <span>04 // &lt;60s UPI Escrow</span>
+              <ArrowRight className="w-3 h-3 opacity-60" />
+            </button>
+            <button
+              type="button"
+              onClick={() => document.getElementById("campus-radar")?.scrollIntoView({ behavior: "smooth" })}
+              className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 border border-white/10 transition-all flex items-center gap-1"
+            >
+              <span>05 // 3-Min Hubs</span>
+              <ArrowRight className="w-3 h-3 opacity-60" />
+            </button>
+          </div>
         </div>
 
         {/* Top-Right: Controls Suite */}
@@ -912,6 +956,18 @@ export function OrbitSphereHero({
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </motion.div>
+
+        {/* Scroll Cue to 5 How Factor Suite */}
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
+          <button
+            type="button"
+            onClick={() => document.getElementById("scenario-calculator")?.scrollIntoView({ behavior: "smooth" })}
+            className="px-4 py-1.5 rounded-full bg-black/60 hover:bg-black/90 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono tracking-widest uppercase backdrop-blur-md transition-all hover:scale-105 flex items-center gap-1.5 shadow-lg shadow-emerald-500/10 animate-bounce"
+          >
+            <span>The How Factor // 5 Reality Checks Below</span>
+            <span className="text-xs">↓</span>
+          </button>
+        </div>
       </div>
 
       {/* ========================================================
