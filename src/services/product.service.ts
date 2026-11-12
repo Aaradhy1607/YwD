@@ -43,6 +43,93 @@ export async function getProducts(params: ProductFilterParams = {}) {
     limit = 24,
   } = params;
 
+  const isPg = await store.checkPostgres();
+  if (isPg) {
+    try {
+      const where: any = {};
+
+      if (category && category !== "all") {
+        where.OR = [
+          { category: { slug: category } },
+          { categoryId: category },
+        ];
+      }
+
+      if (mode === "rent") {
+        where.isRentable = true;
+      } else if (mode === "buy") {
+        where.isPurchasable = true;
+        where.buyPrice = { not: null };
+      }
+
+      if (condition && condition !== "all") {
+        where.conditionGrade = { contains: condition, mode: "insensitive" };
+      }
+
+      if (query.trim()) {
+        const q = query.trim();
+        where.AND = [
+          ...(where.AND || []),
+          {
+            OR: [
+              { title: { contains: q, mode: "insensitive" } },
+              { description: { contains: q, mode: "insensitive" } },
+              { campusHub: { contains: q, mode: "insensitive" } },
+            ],
+          },
+        ];
+      }
+
+      let orderBy: any = { createdAt: "desc" };
+      if (sortBy === "price_low") orderBy = { rentalPriceDaily: "asc" };
+      else if (sortBy === "price_high") orderBy = { rentalPriceDaily: "desc" };
+      else if (sortBy === "deposit_low") orderBy = { deposit: "asc" };
+      else if (sortBy === "newest") orderBy = { createdAt: "desc" };
+
+      const total = await prisma.product.count({ where });
+      const rawProducts = await prisma.product.findMany({
+        where,
+        orderBy,
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          images: { orderBy: { isPrimary: "desc" } },
+          category: true,
+          subcategory: true,
+          owner: {
+            include: {
+              anonymousProfile: true,
+            },
+          },
+        },
+      });
+
+      const products = rawProducts.map((p) => {
+        let parsedSpecs = p.specs;
+        if (typeof parsedSpecs === "string") {
+          try {
+            parsedSpecs = JSON.parse(parsedSpecs);
+          } catch {}
+        }
+        return sanitizeProductForPublic({
+          ...p,
+          specs: parsedSpecs || {},
+          categorySlug: p.category?.slug,
+          subcategorySlug: p.subcategory?.slug,
+        });
+      });
+
+      return {
+        products,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit) || 1,
+      };
+    } catch (e) {
+      console.warn("[Product Service] Postgres query failed, evaluating store fallback:", e);
+    }
+  }
+
   let allProducts = store.getDB().products;
 
   // Filter by category
@@ -106,6 +193,46 @@ export async function getProducts(params: ProductFilterParams = {}) {
 }
 
 export async function getProductById(id: string) {
+  const isPg = await store.checkPostgres();
+  if (isPg) {
+    try {
+      const p = await prisma.product.findUnique({
+        where: { id },
+        include: {
+          images: { orderBy: { isPrimary: "desc" } },
+          category: true,
+          subcategory: true,
+          owner: {
+            include: {
+              anonymousProfile: true,
+            },
+          },
+          reviews: true,
+        },
+      });
+
+      if (p) {
+        let parsedSpecs = p.specs;
+        if (typeof parsedSpecs === "string") {
+          try {
+            parsedSpecs = JSON.parse(parsedSpecs);
+          } catch {}
+        }
+        return {
+          ...sanitizeProductForPublic({
+            ...p,
+            specs: parsedSpecs || {},
+            categorySlug: p.category?.slug,
+            subcategorySlug: p.subcategory?.slug,
+          }),
+          reviews: p.reviews || [],
+        };
+      }
+    } catch (e) {
+      console.warn("[Product Service] Postgres getProductById failed, evaluating store fallback:", e);
+    }
+  }
+
   const p = store.getDB().products.find((prod) => prod.id === id);
   if (!p) return null;
 
@@ -119,6 +246,65 @@ export async function getProductById(id: string) {
 }
 
 export async function createProductListing(data: any, ownerId: string) {
+  const isPg = await store.checkPostgres();
+  if (isPg) {
+    try {
+      const newId = `prod_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const categories = await prisma.category.findMany();
+      const categoryId = data.categoryId || categories[0]?.id || "cat_electronics";
+
+      const created = await prisma.product.create({
+        data: {
+          id: newId,
+          title: data.title,
+          description: data.description,
+          categoryId: categoryId,
+          subcategoryId: data.subcategoryId || null,
+          ownerId,
+          conditionGrade: data.conditionGrade || "Mint (Like New)",
+          rentalPriceHourly: data.rentalPriceHourly ? Number(data.rentalPriceHourly) : Math.round(Number(data.rentalPriceDaily) / 6),
+          rentalPriceDaily: Number(data.rentalPriceDaily),
+          rentalPriceWeekly: Number(data.rentalPriceWeekly),
+          rentalPriceMonthly: data.rentalPriceMonthly ? Number(data.rentalPriceMonthly) : Math.round(Number(data.rentalPriceWeekly) * 3.4),
+          rentalPriceSemester: data.rentalPriceSemester ? Number(data.rentalPriceSemester) : Math.round(Number(data.rentalPriceWeekly) * 8.5),
+          buyPrice: data.buyPrice ? Number(data.buyPrice) : null,
+          mrpReference: Number(data.mrpReference),
+          deposit: Number(data.deposit),
+          isRentable: data.isRentable !== false,
+          isPurchasable: Boolean(data.isPurchasable && data.buyPrice),
+          isAvailable: true,
+          isPaused: false,
+          pickupAvailable: data.pickupAvailable !== false,
+          deliveryAvailable: data.deliveryAvailable !== false,
+          campusHub: data.campusHub || "North Campus Central Hub",
+          pickupAddress: data.pickupAddress || null,
+          specs: data.specs || {},
+          images: {
+            create: (data.images || []).map((url: string, i: number) => ({
+              id: `img_${newId}_${i}`,
+              url,
+              isPrimary: i === 0,
+            })),
+          },
+        },
+        include: {
+          images: true,
+          category: true,
+          subcategory: true,
+          owner: { include: { anonymousProfile: true } },
+        },
+      });
+
+      return sanitizeProductForPublic({
+        ...created,
+        categorySlug: created.category?.slug,
+        subcategorySlug: created.subcategory?.slug,
+      });
+    } catch (e) {
+      console.warn("[Product Service] Postgres createProductListing failed, falling back to store:", e);
+    }
+  }
+
   store.assertProductionDatabase();
   const newId = `prod_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const categories = store.getDB().categories;
@@ -189,11 +375,61 @@ export async function createProductListing(data: any, ownerId: string) {
 }
 
 export async function getUserListings(userId: string) {
+  const isPg = await store.checkPostgres();
+  if (isPg) {
+    try {
+      const products = await prisma.product.findMany({
+        where: { ownerId: userId },
+        include: {
+          images: { orderBy: { isPrimary: "desc" } },
+          category: true,
+          subcategory: true,
+          owner: { include: { anonymousProfile: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+      return products.map((p) =>
+        sanitizeProductForPublic({
+          ...p,
+          categorySlug: p.category?.slug,
+          subcategorySlug: p.subcategory?.slug,
+        })
+      );
+    } catch (e) {
+      console.warn("[Product Service] Postgres getUserListings failed:", e);
+    }
+  }
+
   const products = store.getDB().products.filter((p) => p.ownerId === userId);
   return products.map((p) => sanitizeProductForPublic(p));
 }
 
 export async function toggleProductAvailability(productId: string, userId: string) {
+  const isPg = await store.checkPostgres();
+  if (isPg) {
+    try {
+      const prod = await prisma.product.findUnique({ where: { id: productId } });
+      if (prod && prod.ownerId === userId) {
+        const updated = await prisma.product.update({
+          where: { id: productId },
+          data: {
+            isAvailable: !prod.isAvailable,
+            isPaused: prod.isAvailable, // paused if currently available
+          },
+          include: {
+            images: true,
+            category: true,
+            subcategory: true,
+            owner: { include: { anonymousProfile: true } },
+          },
+        });
+        return sanitizeProductForPublic(updated);
+      }
+    } catch (e) {
+      console.warn("[Product Service] Postgres toggleAvailability failed:", e);
+    }
+  }
+
   let updatedProduct = null;
   store.updateDB((db) => {
     const prod = db.products.find((p) => p.id === productId);
@@ -208,6 +444,45 @@ export async function toggleProductAvailability(productId: string, userId: strin
 }
 
 export async function updateProductListing(productId: string, data: any, userId: string) {
+  const isPg = await store.checkPostgres();
+  if (isPg) {
+    try {
+      const prod = await prisma.product.findUnique({ where: { id: productId } });
+      if (!prod) throw new Error("Product not found");
+      if (prod.ownerId !== userId) {
+        throw new Error("Unauthorized: you can only modify your own listings.");
+      }
+
+      const updateData: any = {};
+      if (data.title) updateData.title = data.title;
+      if (data.description) updateData.description = data.description;
+      if (data.categoryId) updateData.categoryId = data.categoryId;
+      if (data.subcategoryId !== undefined) updateData.subcategoryId = data.subcategoryId;
+      if (data.conditionGrade) updateData.conditionGrade = data.conditionGrade;
+      if (data.rentalPriceDaily !== undefined) updateData.rentalPriceDaily = Number(data.rentalPriceDaily);
+      if (data.rentalPriceWeekly !== undefined) updateData.rentalPriceWeekly = Number(data.rentalPriceWeekly);
+      if (data.buyPrice !== undefined) updateData.buyPrice = data.buyPrice ? Number(data.buyPrice) : null;
+      if (data.deposit !== undefined) updateData.deposit = Number(data.deposit);
+      if (data.campusHub) updateData.campusHub = data.campusHub;
+      if (data.specs) updateData.specs = data.specs;
+
+      const updated = await prisma.product.update({
+        where: { id: productId },
+        data: updateData,
+        include: {
+          images: true,
+          category: true,
+          subcategory: true,
+          owner: { include: { anonymousProfile: true } },
+        },
+      });
+
+      return sanitizeProductForPublic(updated);
+    } catch (e) {
+      console.warn("[Product Service] Postgres updateProductListing failed:", e);
+    }
+  }
+
   store.assertProductionDatabase();
   let updatedProduct: any = null;
   store.updateDB((db) => {
@@ -255,6 +530,33 @@ export async function updateProductListing(productId: string, data: any, userId:
 }
 
 export async function deleteProductListing(productId: string, userId: string) {
+  const isPg = await store.checkPostgres();
+  if (isPg) {
+    try {
+      const prod = await prisma.product.findUnique({ where: { id: productId } });
+      if (!prod) throw new Error("Product not found");
+      if (prod.ownerId !== userId) {
+        throw new Error("Unauthorized: you can only delete your own listings.");
+      }
+
+      // Check active bookings in DB
+      const activeBooking = await prisma.rentalBooking.findFirst({
+        where: {
+          productId,
+          status: { in: ["CONFIRMED", "ACTIVE"] },
+        },
+      });
+      if (activeBooking) {
+        throw new Error("Cannot delete listing with active or confirmed bookings.");
+      }
+
+      await prisma.product.delete({ where: { id: productId } });
+      return { success: true, id: productId };
+    } catch (e) {
+      console.warn("[Product Service] Postgres deleteProductListing failed:", e);
+    }
+  }
+
   store.assertProductionDatabase();
   let deleted = false;
   store.updateDB((db) => {

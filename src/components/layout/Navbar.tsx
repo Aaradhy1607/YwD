@@ -524,6 +524,15 @@ export function Navbar({
                       <span>Confidential Relay Chat</span>
                     </button>
 
+                    <Link
+                      href="/admin"
+                      onClick={() => setShowUserMenu(false)}
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-[#7052DF]/10 font-medium text-[#7052DF] flex items-center gap-2.5 transition-colors"
+                    >
+                      <ShieldCheck className="w-4 h-4 text-[#7052DF]" />
+                      <span>Admin Console</span>
+                    </Link>
+
                     <div className="pt-1 border-t border-[#E5DEC9]">
                       <button
                         type="button"

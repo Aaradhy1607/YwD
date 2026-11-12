@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { registerSchema } from "@/lib/validations";
 import { hashPassword, checkRateLimit, logAuditEvent } from "@/lib/security";
+import { prisma } from "@/lib/prisma";
 import { store } from "@/services/store";
 import { generateAnonymousAlias, getRandomAvatarColor } from "@/lib/privacy";
 
@@ -19,9 +20,91 @@ export async function POST(req: NextRequest) {
     const validated = registerSchema.parse(body);
     const normalizedEmail = validated.email.toLowerCase().trim();
 
+    const isPg = await store.checkPostgres();
+    if (isPg) {
+      try {
+        const existing = await prisma.user.findUnique({
+          where: { email: normalizedEmail },
+        });
+
+        if (existing) {
+          return NextResponse.json(
+            { error: "An account with this email already exists." },
+            { status: 400 }
+          );
+        }
+
+        const hashedPassword = hashPassword(validated.password);
+        const alias = generateAnonymousAlias();
+        const avatarColor = getRandomAvatarColor();
+        const campusHub = validated.campusHub || "North Campus Central Hub • Block B";
+
+        const newUser = await prisma.user.create({
+          data: {
+            name: validated.name || "Verified Member",
+            email: normalizedEmail,
+            passwordHash: hashedPassword,
+            role: "USER",
+            anonymousProfile: {
+              create: {
+                alias,
+                avatarColor,
+                bio: "Active verified renter & circular recommerce participant.",
+                trustScore: 99.0,
+                completedRentals: 0,
+                isVerified: true,
+                campusHub,
+              },
+            },
+          },
+          include: { anonymousProfile: true },
+        });
+
+        await prisma.notification.create({
+          data: {
+            userId: newUser.id,
+            title: "Welcome to YwD Marketplace",
+            message: `Your anonymous identity has been provisioned as ${alias}. Your private phone & email are strictly shielded from counterparties.`,
+            type: "SYSTEM",
+            link: "/dashboard?tab=privacy",
+          },
+        });
+
+        await logAuditEvent({
+          userId: newUser.id,
+          action: "USER_REGISTER",
+          resource: "users",
+          metadata: { alias },
+          ipAddress: ip,
+        });
+
+        return NextResponse.json(
+          {
+            message: "Registration successful. You can now sign in.",
+            user: {
+              id: newUser.id,
+              alias,
+              avatarColor,
+              campusHub,
+              trustScore: 99.0,
+            },
+          },
+          { status: 201 }
+        );
+      } catch (e: any) {
+        if (e.code === "P2002") {
+          return NextResponse.json(
+            { error: "An account with this email already exists." },
+            { status: 400 }
+          );
+        }
+        console.warn("[Register Service] Postgres insert failed, falling back to store:", e);
+      }
+    }
+
     store.assertProductionDatabase();
 
-    // Check if email already registered
+    // Check if email already registered in store
     const existing = store.getDB().users.find((u) => u.email === normalizedEmail);
     if (existing) {
       return NextResponse.json(
@@ -61,7 +144,6 @@ export async function POST(req: NextRequest) {
       db.users.push(newUser);
       db.anonymousProfiles.push(newProfile);
 
-      // Create welcome notification
       db.notifications.unshift({
         id: `notif_${Date.now()}`,
         userId,
@@ -103,4 +185,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

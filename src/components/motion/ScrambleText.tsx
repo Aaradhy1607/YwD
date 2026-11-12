@@ -8,7 +8,7 @@ interface ScrambleTextProps {
   duration?: number; // ms
   characters?: string;
   className?: string;
-  as?: keyof React.JSX.IntrinsicElements;
+  as?: React.ElementType;
 }
 
 const DEFAULT_CHARS = "0123456789ABCDEF!@#$%&*+~/?_[]";

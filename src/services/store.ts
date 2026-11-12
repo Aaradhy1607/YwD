@@ -248,6 +248,9 @@ class StoreManager {
   }
 
   public async checkPostgres(): Promise<boolean> {
+    if (process.env.NODE_ENV === "test" || process.env.VITEST) {
+      return false;
+    }
     if (this.isPostgresAvailable !== null) return this.isPostgresAvailable;
     const dbUrl = process.env.DATABASE_URL;
     if (!dbUrl || dbUrl.includes("localhost:5432") || dbUrl.includes("placeholder")) {

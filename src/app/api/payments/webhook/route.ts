@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyWebhookSignature } from "@/lib/razorpay";
+import { prisma } from "@/lib/prisma";
 import { store } from "@/services/store";
 import { logAuditEvent } from "@/lib/security";
 
@@ -27,6 +28,92 @@ export async function POST(req: NextRequest) {
       metadata: { eventId: event.id || "dev_event" },
     });
 
+    // 1. Persist directly to Neon PostgreSQL when connected
+    const isPg = await store.checkPostgres();
+    if (isPg) {
+      try {
+        await prisma.$transaction(async (tx) => {
+          if (eventType === "payment.captured" || eventType === "order.paid") {
+            const paymentEntity = payload?.payment?.entity;
+            const orderId = paymentEntity?.order_id;
+            const paymentId = paymentEntity?.id;
+            const notes = paymentEntity?.notes || {};
+            const bookingId = notes.bookingId;
+            const purchaseOrderId = notes.orderId;
+
+            if (orderId && paymentId) {
+              await tx.payment.upsert({
+                where: { razorpayOrderId: orderId },
+                update: {
+                  razorpayPaymentId: paymentId,
+                  razorpaySignature: signature || "webhook_verified",
+                  status: "SUCCESS",
+                  amount: (paymentEntity?.amount || 0) / 100,
+                },
+                create: {
+                  bookingId: bookingId || null,
+                  orderId: purchaseOrderId || null,
+                  razorpayOrderId: orderId,
+                  razorpayPaymentId: paymentId,
+                  razorpaySignature: signature || "webhook_verified",
+                  amount: (paymentEntity?.amount || 0) / 100,
+                  currency: paymentEntity?.currency || "INR",
+                  status: "SUCCESS",
+                },
+              });
+
+              if (bookingId) {
+                await tx.rentalBooking.updateMany({
+                  where: { id: bookingId },
+                  data: { status: "CONFIRMED" },
+                });
+              }
+
+              if (purchaseOrderId) {
+                await tx.purchaseOrder.updateMany({
+                  where: { id: purchaseOrderId },
+                  data: { status: "PAID" },
+                });
+              }
+            }
+          } else if (eventType === "refund.processed") {
+            const refundEntity = payload?.refund?.entity;
+            const paymentId = refundEntity?.payment_id;
+            const refundAmount = (refundEntity?.amount || 0) / 100;
+            const refundId = refundEntity?.id;
+
+            if (paymentId) {
+              await tx.payment.updateMany({
+                where: { razorpayPaymentId: paymentId },
+                data: {
+                  status: "REFUNDED",
+                  refundId: refundId || null,
+                  refundAmount: refundAmount,
+                },
+              });
+
+              const paymentRecord = await tx.payment.findFirst({
+                where: { razorpayPaymentId: paymentId },
+              });
+
+              if (paymentRecord?.bookingId) {
+                await tx.rentalBooking.updateMany({
+                  where: { id: paymentRecord.bookingId },
+                  data: {
+                    escrowStatus: "REFUNDED",
+                    escrowRefundAmount: refundAmount,
+                  },
+                });
+              }
+            }
+          }
+        });
+      } catch (pgError) {
+        console.warn("[Webhook] Postgres transaction update failed, fallback retained:", pgError);
+      }
+    }
+
+    // 2. Persist to in-memory store for fallback synchronization
     store.updateDB((db) => {
       // 1. Payment Captured
       if (eventType === "payment.captured" || eventType === "order.paid") {

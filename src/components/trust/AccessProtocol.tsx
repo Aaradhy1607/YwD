@@ -10,6 +10,7 @@ import {
   ArrowRight,
   MapPin,
 } from "lucide-react";
+import { AccessJourney3DCanvas } from "./AccessJourney3DCanvas";
 
 export function AccessProtocol() {
   const [activeStep, setActiveStep] = useState(0);
@@ -180,19 +181,22 @@ export function AccessProtocol() {
               </div>
             </div>
 
-            {/* Step Right: Interactive Graphic Frame */}
-            <div className="lg:col-span-5 bg-[#202522] rounded-2xl border border-white/10 p-6 space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-white/10 text-xs text-[#9BB5A3]">
-                <div className="flex items-center gap-2">
-                  <Icon className="w-4 h-4 text-[#C46A42]" />
-                  <span className="font-mono text-white font-semibold">
-                    PROTOCOL // {current.stepNumber}
+            {/* Step Right: Interactive 3D Journey & Protocol Frame */}
+            <div className="lg:col-span-5 space-y-4">
+              <AccessJourney3DCanvas activeStep={activeStep} />
+
+              <div className="bg-[#202522] rounded-2xl border border-white/10 p-5 space-y-3">
+                <div className="flex items-center justify-between pb-2.5 border-b border-white/10 text-xs text-[#9BB5A3]">
+                  <div className="flex items-center gap-2">
+                    <Icon className="w-4 h-4 text-[#C46A42]" />
+                    <span className="font-mono text-white font-semibold">
+                      PROTOCOL TELEMETRY // 0{activeStep + 1}
+                    </span>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-white/5 text-[#789681] font-mono">
+                    LIVE VERIFIED
                   </span>
                 </div>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-white/5 text-[#789681]">
-                  ACTIVE
-                </span>
-              </div>
 
               {/* Step Graphic Visuals */}
               <div className="p-4 bg-white/5 rounded-xl border border-white/5 space-y-3 font-mono text-xs text-[#9BB5A3]">
@@ -298,6 +302,7 @@ export function AccessProtocol() {
           </div>
         </div>
       </div>
-    </section>
+    </div>
+  </section>
   );
 }

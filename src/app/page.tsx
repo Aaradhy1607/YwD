@@ -1,12 +1,15 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { motion, AnimatePresence, useScroll } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { HeroSection } from "@/components/marketplace/HeroSection";
 import { OrbitSphereHero } from "@/components/marketplace/OrbitSphereHero";
 import { InteractiveCursor } from "@/components/motion/InteractiveCursor";
+import { ImmersiveCanvasWrapper } from "@/components/canvas/ImmersiveCanvasWrapper";
+import { useScrollVelocity } from "@/hooks/useScrollVelocity";
+import { useSectionInView } from "@/hooks/useSectionInView";
 import { CategoryGrid } from "@/components/marketplace/CategoryGrid";
 import { CategoriesView } from "@/components/marketplace/CategoriesView";
 import { ProductGrid } from "@/components/marketplace/ProductGrid";
@@ -30,6 +33,34 @@ import { CheckCircle2, X } from "lucide-react";
 
 export default function YwDApp() {
   const { scrollYProgress } = useScroll();
+  const { velocity } = useScrollVelocity();
+
+  const sectionIds = useMemo(
+    () => [
+      "hero-section",
+      "specimen-deck",
+      "category-grid",
+      "campus-telemetry",
+      "technical-anatomy",
+      "curated-spotlight",
+      "product-inventory",
+      "access-protocol",
+      "trust-section",
+    ],
+    []
+  );
+
+  const { activeSectionIndex } = useSectionInView(sectionIds);
+  const [scrollProgressVal, setScrollProgressVal] = useState(0);
+  const [scrollVelocityVal, setScrollVelocityVal] = useState(0);
+
+  useMotionValueEvent(scrollYProgress, "change", (latest) => {
+    setScrollProgressVal(latest);
+  });
+
+  useMotionValueEvent(velocity, "change", (latest) => {
+    setScrollVelocityVal(latest);
+  });
 
   // Navigation screen
   const [activeScreen, setActiveScreen] = useState<string>("home");
@@ -313,6 +344,14 @@ export default function YwDApp() {
       {/* Bespoke Magnetic Interactive Cursor & Subtle Celestial Dust */}
       <InteractiveCursor mode={cosmicMode ? "cosmic" : "studio"} />
 
+      {/* 3D Immersive Full-Screen Persistent Canvas & Scene Orchestration */}
+      <ImmersiveCanvasWrapper
+        scrollProgress={scrollProgressVal}
+        scrollVelocity={scrollVelocityVal}
+        activeSectionIndex={activeSectionIndex}
+        cosmicMode={cosmicMode}
+      />
+
       {/* Sleek Top Scroll Progress Bar */}
       <motion.div
         style={{ scaleX: scrollYProgress }}
@@ -382,121 +421,139 @@ export default function YwDApp() {
               transition={{ duration: 0.2 }}
             >
               {/* Master 3D Orbit Sphere Hero & Classic Mode Switcher */}
-              {heroView === "orbit" ? (
-                <OrbitSphereHero
-                  categories={categories}
-                  heroProducts={allProducts.length > 0 ? allProducts : SEED_PRODUCTS}
-                  selectedCategory={selectedCategory}
-                  setSelectedCategory={(cat) => {
-                    setSelectedCategory(cat);
-                    setSelectedSubcategory("all");
-                    setActiveScreen("explore");
-                  }}
-                  searchQuery={searchQuery}
-                  setSearchQuery={setSearchQuery}
-                  transactionFilter={transactionFilter}
-                  setTransactionFilter={setTransactionFilter}
-                  preferredDuration={preferredDuration}
-                  setPreferredDuration={setPreferredDuration}
-                  onExplore={() => setActiveScreen("explore")}
-                  onOpenProductDetail={handleOpenDetail}
-                  onOpenListProduct={() => setIsListProductOpen(true)}
-                  onOpenHubModal={() => setIsHubModalOpen(true)}
-                  onOpenGuidedDiscovery={() => setIsGuidedDiscoveryOpen(true)}
-                  cosmicMode={cosmicMode}
-                  onToggleCosmicMode={() => setCosmicMode(!cosmicMode)}
-                  heroView={heroView}
-                  onToggleHeroView={setHeroView}
-                />
-              ) : (
-                <HeroSection
-                  categories={categories}
-                  heroProducts={allProducts.length > 0 ? allProducts : SEED_PRODUCTS}
-                  selectedCategory={selectedCategory}
-                  setSelectedCategory={(cat) => {
-                    setSelectedCategory(cat);
-                    setSelectedSubcategory("all");
-                    setActiveScreen("explore");
-                  }}
-                  searchQuery={searchQuery}
-                  setSearchQuery={setSearchQuery}
-                  transactionFilter={transactionFilter}
-                  setTransactionFilter={setTransactionFilter}
-                  preferredDuration={preferredDuration}
-                  setPreferredDuration={setPreferredDuration}
-                  onExplore={() => setActiveScreen("explore")}
-                  onOpenProductDetail={handleOpenDetail}
-                  onOpenListProduct={() => setIsListProductOpen(true)}
-                  onOpenHubModal={() => setIsHubModalOpen(true)}
-                  onOpenGuidedDiscovery={() => setIsGuidedDiscoveryOpen(true)}
-                />
-              )}
+              <div id="hero-section">
+                {heroView === "orbit" ? (
+                  <OrbitSphereHero
+                    categories={categories}
+                    heroProducts={allProducts.length > 0 ? allProducts : SEED_PRODUCTS}
+                    selectedCategory={selectedCategory}
+                    setSelectedCategory={(cat) => {
+                      setSelectedCategory(cat);
+                      setSelectedSubcategory("all");
+                      setActiveScreen("explore");
+                    }}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    transactionFilter={transactionFilter}
+                    setTransactionFilter={setTransactionFilter}
+                    preferredDuration={preferredDuration}
+                    setPreferredDuration={setPreferredDuration}
+                    onExplore={() => setActiveScreen("explore")}
+                    onOpenProductDetail={handleOpenDetail}
+                    onOpenListProduct={() => setIsListProductOpen(true)}
+                    onOpenHubModal={() => setIsHubModalOpen(true)}
+                    onOpenGuidedDiscovery={() => setIsGuidedDiscoveryOpen(true)}
+                    cosmicMode={cosmicMode}
+                    onToggleCosmicMode={() => setCosmicMode(!cosmicMode)}
+                    heroView={heroView}
+                    onToggleHeroView={setHeroView}
+                  />
+                ) : (
+                  <HeroSection
+                    categories={categories}
+                    heroProducts={allProducts.length > 0 ? allProducts : SEED_PRODUCTS}
+                    selectedCategory={selectedCategory}
+                    setSelectedCategory={(cat) => {
+                      setSelectedCategory(cat);
+                      setSelectedSubcategory("all");
+                      setActiveScreen("explore");
+                    }}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    transactionFilter={transactionFilter}
+                    setTransactionFilter={setTransactionFilter}
+                    preferredDuration={preferredDuration}
+                    setPreferredDuration={setPreferredDuration}
+                    onExplore={() => setActiveScreen("explore")}
+                    onOpenProductDetail={handleOpenDetail}
+                    onOpenListProduct={() => setIsListProductOpen(true)}
+                    onOpenHubModal={() => setIsHubModalOpen(true)}
+                    onOpenGuidedDiscovery={() => setIsGuidedDiscoveryOpen(true)}
+                  />
+                )}
+              </div>
 
               {/* Tilted Archival Card Deck: 4 Field-Tested Disciplines */}
-              <SpecimenDeck
-                onOpenProductDetail={handleOpenDetail}
-                onExplore={() => setActiveScreen("explore")}
-                cosmicMode={cosmicMode}
-              />
+              <div id="specimen-deck">
+                <SpecimenDeck
+                  onOpenProductDetail={handleOpenDetail}
+                  onExplore={() => setActiveScreen("explore")}
+                  cosmicMode={cosmicMode}
+                />
+              </div>
 
               {/* Asymmetric Equipment Architecture */}
-              <CategoryGrid
-                categories={categories}
-                selectedCategory={selectedCategory}
-                onSelectCategory={(slug) => {
-                  setSelectedCategory(slug);
-                  setSelectedSubcategory("all");
-                  setActiveScreen("explore");
-                }}
-                cosmicMode={cosmicMode}
-              />
+              <div id="category-grid">
+                <CategoryGrid
+                  categories={categories}
+                  selectedCategory={selectedCategory}
+                  onSelectCategory={(slug) => {
+                    setSelectedCategory(slug);
+                    setSelectedSubcategory("all");
+                    setActiveScreen("explore");
+                  }}
+                  cosmicMode={cosmicMode}
+                />
+              </div>
 
               {/* Developer Infrastructure & Campus Telemetry (fossclub.tech & Juniper Architecture) */}
-              <CampusTelemetryDashboard
-                cosmicMode={cosmicMode}
-                onExplore={() => setActiveScreen("explore")}
-                onOpenHubModal={() => setIsHubModalOpen(true)}
-              />
+              <div id="campus-telemetry">
+                <CampusTelemetryDashboard
+                  cosmicMode={cosmicMode}
+                  onExplore={() => setActiveScreen("explore")}
+                  onOpenHubModal={() => setIsHubModalOpen(true)}
+                />
+              </div>
 
               {/* Technical Anatomy: Blueprint Hardware Exploded Inspector */}
-              <TechnicalAnatomyInspector
-                onOpenProductDetail={handleOpenDetail}
-              />
+              <div id="technical-anatomy">
+                <TechnicalAnatomyInspector
+                  onOpenProductDetail={handleOpenDetail}
+                />
+              </div>
 
               {/* Editorial Spotlight: Economics of Access & Flagship Feature */}
-              <CuratedSpotlight
-                onOpenProductDetail={handleOpenDetail}
-                onExplore={() => setActiveScreen("explore")}
-              />
+              <div id="curated-spotlight">
+                <CuratedSpotlight
+                  onOpenProductDetail={handleOpenDetail}
+                  onExplore={() => setActiveScreen("explore")}
+                />
+              </div>
 
               {/* Verified Product Inventory Grid */}
-              <ProductGrid
-                products={filteredProducts.slice(0, 8)}
-                preferredDuration={preferredDuration}
-                setPreferredDuration={setPreferredDuration}
-                sortBy={sortBy}
-                setSortBy={setSortBy}
-                wishlistIds={wishlistIds}
-                onToggleWishlist={handleToggleWishlist}
-                onOpenProductDetail={handleOpenDetail}
-                onResetFilters={() => {
-                  setSelectedCategory("all");
-                  setSelectedSubcategory("all");
-                  setSearchQuery("");
-                  setTransactionFilter("all");
-                }}
-                activeCategoryName={
-                  selectedCategory !== "all"
-                    ? `${activeCategoryObj?.name || "Category"} Listings`
-                    : "Curated Equipment Inventory"
-                }
-              />
+              <div id="product-inventory">
+                <ProductGrid
+                  products={filteredProducts.slice(0, 8)}
+                  preferredDuration={preferredDuration}
+                  setPreferredDuration={setPreferredDuration}
+                  sortBy={sortBy}
+                  setSortBy={setSortBy}
+                  wishlistIds={wishlistIds}
+                  onToggleWishlist={handleToggleWishlist}
+                  onOpenProductDetail={handleOpenDetail}
+                  onResetFilters={() => {
+                    setSelectedCategory("all");
+                    setSelectedSubcategory("all");
+                    setSearchQuery("");
+                    setTransactionFilter("all");
+                  }}
+                  activeCategoryName={
+                    selectedCategory !== "all"
+                      ? `${activeCategoryObj?.name || "Category"} Listings`
+                      : "Curated Equipment Inventory"
+                  }
+                />
+              </div>
 
               {/* The Access Protocol: 4-Step Narrative Walkthrough */}
-              <AccessProtocol />
+              <div id="access-protocol">
+                <AccessProtocol />
+              </div>
 
               {/* Core Trust & Accountability Guarantees */}
-              <TrustSection />
+              <div id="trust-section">
+                <TrustSection />
+              </div>
             </motion.div>
           )}
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { store } from "@/services/store";
 import { sanitizeToAnonymousProfile } from "@/lib/privacy";
 
@@ -10,7 +11,34 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ authenticated: false, user: null }, { status: 401 });
     }
 
-    const userId = session.user.id || "usr_default_demo";
+    const userId = session.user.id;
+    if (!userId) {
+      return NextResponse.json({ authenticated: false, user: null }, { status: 401 });
+    }
+
+    const isPg = await store.checkPostgres();
+    if (isPg) {
+      try {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { anonymousProfile: true },
+        });
+
+        if (dbUser) {
+          return NextResponse.json({
+            authenticated: true,
+            user: {
+              id: dbUser.id,
+              role: dbUser.role,
+              anonymousProfile: sanitizeToAnonymousProfile(dbUser.anonymousProfile || dbUser),
+            },
+          });
+        }
+      } catch (e) {
+        console.warn("[Auth Me] Postgres query failed, falling back to store:", e);
+      }
+    }
+
     const user = store.getDB().users.find((u) => u.id === userId);
     const profile = store.getDB().anonymousProfiles.find((p) => p.userId === userId);
 
@@ -29,4 +57,3 @@ export async function GET(req: NextRequest) {
     );
   }
 }
-

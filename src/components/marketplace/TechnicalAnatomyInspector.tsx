@@ -13,6 +13,7 @@ import {
   Info,
 } from "lucide-react";
 import { formatINR } from "@/lib/pricing";
+import { Hardware3DCanvas } from "./Hardware3DCanvas";
 
 interface HardwareComponent {
   id: string;
@@ -202,9 +203,13 @@ export function TechnicalAnatomyInspector({
             </div>
           </div>
 
-          {/* RIGHT: High-Precision Schematic Card (7 cols) */}
-          <div className="lg:col-span-7 bg-[#FAF7F2] rounded-2xl border border-[#E5DEC9] p-6 sm:p-8 space-y-6">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E5DEC9]">
+          {/* RIGHT: High-Precision Schematic Card & 3D Interactive Exploded View (7 cols) */}
+          <div className="lg:col-span-7 space-y-6">
+            {/* Live 3D Exploded Blueprint Model */}
+            <Hardware3DCanvas activeComponentId={activeComp.id} />
+
+            <div className="bg-[#FAF7F2] rounded-2xl border border-[#E5DEC9] p-6 sm:p-8 space-y-6">
+              <div className="flex items-center justify-between pb-3 border-b border-[#E5DEC9]">
               <span className="font-mono text-xs text-[#C46A42] font-semibold">
                 COMPONENT SPEC // {activeComp.index}
               </span>
@@ -263,7 +268,8 @@ export function TechnicalAnatomyInspector({
           </div>
         </div>
       </div>
-    </section>
+    </div>
+  </section>
   );
 }
 

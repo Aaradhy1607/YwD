@@ -75,19 +75,31 @@ export function verifyRazorpaySignature(params: {
     .update(body.toString())
     .digest("hex");
 
-  return crypto.timingSafeEqual(
-    Buffer.from(expectedSignature),
-    Buffer.from(params.signature)
-  );
+  const expectedBuffer = Buffer.from(expectedSignature, "utf-8");
+  const signatureBuffer = Buffer.from(params.signature, "utf-8");
+
+  if (expectedBuffer.length !== signatureBuffer.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(expectedBuffer, signatureBuffer);
 }
 
 /**
  * Verifies Razorpay webhook signature.
  */
 export function verifyWebhookSignature(body: string, signature: string): boolean {
+  if (!body || !signature) {
+    return false;
+  }
+
   const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || "";
   if (!webhookSecret || webhookSecret.includes("placeholder")) {
-    return true; // Dev fallback
+    if (process.env.NODE_ENV === "production") {
+      console.error("[Razorpay Webhook] Signature verification failed: RAZORPAY_WEBHOOK_SECRET is not configured in production.");
+      return false;
+    }
+    return true; // Dev fallback only for non-production environments
   }
 
   const expectedSignature = crypto
@@ -95,10 +107,14 @@ export function verifyWebhookSignature(body: string, signature: string): boolean
     .update(body)
     .digest("hex");
 
-  return crypto.timingSafeEqual(
-    Buffer.from(expectedSignature),
-    Buffer.from(signature)
-  );
+  const expectedBuffer = Buffer.from(expectedSignature, "utf-8");
+  const signatureBuffer = Buffer.from(signature, "utf-8");
+
+  if (expectedBuffer.length !== signatureBuffer.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(expectedBuffer, signatureBuffer);
 }
 
 /**

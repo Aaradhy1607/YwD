@@ -100,7 +100,7 @@ describe("Database Persistence & Transaction Integrity Verification", () => {
     // Verify product retrieval from persistence layer
     const fetched = await getProductById(createdProductId);
     expect(fetched).toBeDefined();
-    expect(fetched?.title).toBe("Leica Q3 Monochrom Compact Camera");
+    expect((fetched as any)?.title).toBe("Leica Q3 Monochrom Compact Camera");
 
     // Verify only owner can edit listing
     await expect(

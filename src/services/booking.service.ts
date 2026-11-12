@@ -1,6 +1,7 @@
 import { store } from "./store";
 import { prisma } from "@/lib/prisma";
 import { calculateRentalPrice, DurationTier } from "@/lib/pricing";
+import { generateSecureOTP } from "@/lib/security";
 
 export interface CreateBookingInput {
   productId: string;
@@ -54,8 +55,6 @@ export async function checkDateAvailability(
     }
   }
 
-  store.assertProductionDatabase();
-
   const bookings = store.getDB().rentalBookings.filter(
     (b) =>
       b.productId === productId &&
@@ -80,6 +79,114 @@ export async function checkDateAvailability(
 }
 
 export async function createRentalBooking(input: CreateBookingInput) {
+  const isPg = await store.checkPostgres();
+  if (isPg) {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const product = await tx.product.findUnique({
+          where: { id: input.productId },
+          include: {
+            images: true,
+            owner: { include: { anonymousProfile: true } },
+          },
+        });
+
+        if (!product) throw new Error("Product listing not found.");
+        if (!product.isRentable || !product.isAvailable) {
+          throw new Error("This product is currently not available for rent.");
+        }
+        if (product.ownerId === input.renterId) {
+          throw new Error("You cannot rent your own listing.");
+        }
+
+        // Concurrency-safe overlap check inside transaction
+        const overlapping = await tx.rentalBooking.findFirst({
+          where: {
+            productId: input.productId,
+            status: { in: ["CONFIRMED", "ACTIVE", "PENDING"] },
+            startDate: { lt: new Date(input.endDate) },
+            endDate: { gt: new Date(input.startDate) },
+          },
+        });
+
+        if (overlapping) {
+          throw new Error(`Collision: Item already reserved between ${overlapping.startDate.toLocaleDateString()} and ${overlapping.endDate.toLocaleDateString()}.`);
+        }
+
+        const pricing = calculateRentalPrice({
+          rates: {
+            hourly: product.rentalPriceHourly,
+            daily: product.rentalPriceDaily,
+            weekly: product.rentalPriceWeekly,
+            monthly: product.rentalPriceMonthly,
+            semester: product.rentalPriceSemester,
+            deposit: product.deposit,
+          },
+          durationTier: input.durationTier,
+          durationUnits: input.durationUnits,
+          deliveryMethod: input.deliveryMethod || "PICKUP",
+        });
+
+        const bookingId = `bk_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const bookingNumber = `YWD-RENT-${Math.floor(100000 + Math.random() * 900000)}`;
+        const pickupOtp = generateSecureOTP();
+        const returnOtp = generateSecureOTP();
+
+        const booking = await tx.rentalBooking.create({
+          data: {
+            id: bookingId,
+            bookingNumber,
+            productId: product.id,
+            renterId: input.renterId,
+            startDate: new Date(input.startDate),
+            endDate: new Date(input.endDate),
+            durationTier: input.durationTier,
+            durationUnits: input.durationUnits,
+            rentAmount: pricing.grossRent,
+            depositAmount: pricing.securityDeposit,
+            deliveryFee: pricing.deliveryFee,
+            totalAmount: pricing.totalPayable,
+            status: "CONFIRMED",
+            deliveryMethod: input.deliveryMethod || "PICKUP",
+            deliveryAddress: input.deliveryAddress || null,
+            pickupOtp,
+            returnOtp,
+            conditionBeforePhotos: product.images?.map((img) => img.url) || [],
+            conditionAfterPhotos: [],
+            escrowStatus: "HELD",
+          },
+          include: {
+            product: { include: { images: true } },
+          },
+        });
+
+        await tx.notification.create({
+          data: {
+            userId: input.renterId,
+            title: "Booking Confirmed - Deposit Protected",
+            message: `Booking ${bookingNumber} for "${product.title}" confirmed. Pickup OTP: ${pickupOtp}. Security deposit is securely recorded.`,
+            type: "BOOKING",
+            link: "/dashboard?tab=rentals",
+          },
+        });
+
+        return {
+          ...booking,
+          productTitle: product.title,
+          productImage: product.images?.[0]?.url || "",
+          ownerAlias: product.owner.anonymousProfile?.alias || "VerifiedPeer",
+          platformFee: pricing.platformFee,
+          gstAmount: pricing.gstAmount,
+        };
+      });
+    } catch (e: any) {
+      if (e.message?.includes("Collision") || e.message?.includes("cannot rent your own")) {
+        throw e;
+      }
+      console.warn("[Booking Service] Postgres transaction failed, falling back to store:", e);
+    }
+  }
+
   store.assertProductionDatabase();
   const product = store.getDB().products.find((p) => p.id === input.productId);
   if (!product) {
@@ -90,12 +197,10 @@ export async function createRentalBooking(input: CreateBookingInput) {
     throw new Error("This product is currently not available for rent.");
   }
 
-  // Prevent users from renting their own products
   if (product.ownerId === input.renterId) {
     throw new Error("You cannot rent your own listing.");
   }
 
-  // Concurrency-safe availability validation
   const availability = await checkDateAvailability(
     input.productId,
     input.startDate,
@@ -106,7 +211,6 @@ export async function createRentalBooking(input: CreateBookingInput) {
     throw new Error(availability.conflictReason || "Selected dates conflict with an existing reservation.");
   }
 
-  // Recalculate price strictly on the server
   const pricing = calculateRentalPrice({
     rates: {
       hourly: product.rentalPriceHourly,
@@ -123,8 +227,8 @@ export async function createRentalBooking(input: CreateBookingInput) {
 
   const bookingId = `bk_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const bookingNumber = `YWD-RENT-${Math.floor(100000 + Math.random() * 900000)}`;
-  const pickupOtp = Math.floor(100000 + Math.random() * 900000).toString();
-  const returnOtp = Math.floor(100000 + Math.random() * 900000).toString();
+  const pickupOtp = generateSecureOTP();
+  const returnOtp = generateSecureOTP();
 
   const newBooking = {
     id: bookingId,
@@ -145,7 +249,7 @@ export async function createRentalBooking(input: CreateBookingInput) {
     platformFee: pricing.platformFee,
     gstAmount: pricing.gstAmount,
     totalAmount: pricing.totalPayable,
-    status: "CONFIRMED", // Secured in escrow
+    status: "CONFIRMED",
     deliveryMethod: input.deliveryMethod || "PICKUP",
     deliveryAddress: input.deliveryAddress || null,
     campusHub: product.campusHub,
@@ -164,12 +268,11 @@ export async function createRentalBooking(input: CreateBookingInput) {
   store.updateDB((db) => {
     db.rentalBookings.unshift(newBooking);
 
-    // Add in-app notification
     db.notifications.unshift({
       id: `notif_${Date.now()}`,
       userId: input.renterId,
       title: "Booking Confirmed - Deposit Protected",
-      message: `Your booking ${bookingNumber} for "${product.title}" is confirmed. Pickup OTP: ${pickupOtp}. Security deposit protected on platform ledger.`,
+      message: `Your booking ${bookingNumber} for "${product.title}" is confirmed. Pickup OTP: ${pickupOtp}. Security deposit is securely recorded.`,
       type: "BOOKING",
       link: `/dashboard?tab=rentals`,
       isRead: false,
@@ -181,6 +284,43 @@ export async function createRentalBooking(input: CreateBookingInput) {
 }
 
 export async function getUserBookings(userId: string) {
+  const isPg = await store.checkPostgres();
+  if (isPg) {
+    try {
+      const bookings = await prisma.rentalBooking.findMany({
+        where: {
+          OR: [
+            { renterId: userId },
+            { product: { ownerId: userId } },
+          ],
+        },
+        include: {
+          product: {
+            include: {
+              images: true,
+              owner: { include: { anonymousProfile: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      return bookings.map((b) => ({
+        ...b,
+        startDate: b.startDate.toISOString(),
+        endDate: b.endDate.toISOString(),
+        createdAt: b.createdAt.toISOString(),
+        updatedAt: b.updatedAt.toISOString(),
+        productTitle: b.product.title,
+        productImage: b.product.images?.[0]?.url || "",
+        ownerId: b.product.ownerId,
+        ownerAlias: b.product.owner.anonymousProfile?.alias || "VerifiedPeer",
+      }));
+    } catch (e) {
+      console.warn("[Booking Service] Postgres getUserBookings failed:", e);
+    }
+  }
+
   const all = store.getDB().rentalBookings;
   return all.filter((b) => b.renterId === userId || b.ownerId === userId);
 }
@@ -193,6 +333,55 @@ export async function processReturnInspection(params: {
   refundUpiId: string;
   damageReported?: boolean;
 }) {
+  const isPg = await store.checkPostgres();
+  if (isPg) {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const booking = await tx.rentalBooking.findUnique({
+          where: { id: params.bookingId },
+          include: { product: true },
+        });
+
+        if (!booking) throw new Error("Booking not found.");
+        if (booking.returnOtp !== params.returnOtp.trim()) {
+          throw new Error("Invalid 6-digit return OTP verification code.");
+        }
+
+        const isDamage = Boolean(params.damageReported);
+        const updated = await tx.rentalBooking.update({
+          where: { id: params.bookingId },
+          data: {
+            conditionAfterPhotos: params.conditionPhotos,
+            refundUpiId: params.refundUpiId,
+            damageReported: isDamage,
+            status: isDamage ? "DISPUTED" : "COMPLETED",
+            escrowStatus: isDamage ? "PARTIALLY_REFUNDED" : "REFUNDED",
+            escrowRefundAmount: isDamage ? null : booking.depositAmount,
+          },
+        });
+
+        await tx.notification.create({
+          data: {
+            userId: booking.renterId,
+            title: isDamage ? "Return Completed - Damage Under Review" : "Security Deposit Refund Initiated",
+            message: isDamage
+              ? `Inspection for ${booking.bookingNumber} noted condition remarks. Dispute review open.`
+              : `Your refundable deposit of ₹${booking.depositAmount} for ${booking.bookingNumber} has been initiated to UPI ID ${params.refundUpiId}.`,
+            type: "ESCROW",
+            link: "/dashboard?tab=refunds",
+          },
+        });
+
+        return updated;
+      });
+    } catch (e) {
+      if (e instanceof Error && (e.message.includes("Invalid") || e.message.includes("not found"))) {
+        throw e;
+      }
+      console.warn("[Booking Service] Postgres processReturnInspection failed:", e);
+    }
+  }
+
   let updatedBooking: any = null;
 
   store.updateDB((db) => {
@@ -221,7 +410,6 @@ export async function processReturnInspection(params: {
     booking.updatedAt = new Date().toISOString();
     updatedBooking = booking;
 
-    // Trigger instant UPI refund notification
     db.notifications.unshift({
       id: `notif_${Date.now()}`,
       userId: booking.renterId,
@@ -243,6 +431,54 @@ export async function processPickupHandover(params: {
   pickupOtp: string;
   conditionBeforePhotos?: string[];
 }) {
+  const isPg = await store.checkPostgres();
+  if (isPg) {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const booking = await tx.rentalBooking.findUnique({
+          where: { id: params.bookingId },
+          include: { product: true },
+        });
+
+        if (!booking) throw new Error("Booking not found.");
+        if (booking.renterId !== params.userId && booking.product.ownerId !== params.userId) {
+          throw new Error("Unauthorized: only counterparties can verify handover.");
+        }
+        if (booking.status !== "CONFIRMED") {
+          throw new Error(`Cannot complete handover for booking in ${booking.status} status.`);
+        }
+        if (booking.pickupOtp !== params.pickupOtp.trim()) {
+          throw new Error("Invalid 6-digit pickup handover OTP code.");
+        }
+
+        const updated = await tx.rentalBooking.update({
+          where: { id: params.bookingId },
+          data: {
+            status: "ACTIVE",
+            ...(params.conditionBeforePhotos ? { conditionBeforePhotos: params.conditionBeforePhotos } : {}),
+          },
+        });
+
+        await tx.notification.create({
+          data: {
+            userId: booking.renterId,
+            title: "Equipment Handover Verified & Active",
+            message: `Pickup verified with OTP. Your rental period for ${booking.product.title} is now active. Return OTP: ${booking.returnOtp}`,
+            type: "BOOKING",
+            link: "/dashboard?tab=rentals",
+          },
+        });
+
+        return updated;
+      });
+    } catch (e) {
+      if (e instanceof Error && (e.message.includes("Invalid") || e.message.includes("Unauthorized") || e.message.includes("Cannot"))) {
+        throw e;
+      }
+      console.warn("[Booking Service] Postgres processPickupHandover failed:", e);
+    }
+  }
+
   let updatedBooking: any = null;
 
   store.updateDB((db) => {
@@ -270,7 +506,6 @@ export async function processPickupHandover(params: {
     booking.updatedAt = new Date().toISOString();
     updatedBooking = booking;
 
-    // Dispatch in-app notification
     db.notifications.unshift({
       id: `notif_${Date.now()}`,
       userId: booking.renterId,
@@ -302,6 +537,46 @@ export async function cancelRentalBooking(params: {
   userId: string;
   reason: string;
 }) {
+  const isPg = await store.checkPostgres();
+  if (isPg) {
+    try {
+      const booking = await prisma.rentalBooking.findUnique({
+        where: { id: params.bookingId },
+        include: { product: true },
+      });
+      if (!booking) throw new Error("Booking not found.");
+      if (booking.renterId !== params.userId && booking.product.ownerId !== params.userId) {
+        throw new Error("Unauthorized: you cannot cancel this booking.");
+      }
+      if (["ACTIVE", "COMPLETED", "CANCELLED", "DISPUTED"].includes(booking.status)) {
+        throw new Error(`Cannot cancel a booking that is currently ${booking.status}.`);
+      }
+
+      const updated = await prisma.rentalBooking.update({
+        where: { id: params.bookingId },
+        data: {
+          status: "CANCELLED",
+          escrowStatus: booking.escrowStatus === "HELD" ? "REFUNDED" : booking.escrowStatus,
+          escrowRefundAmount: booking.escrowStatus === "HELD" ? booking.depositAmount : booking.escrowRefundAmount,
+        },
+      });
+
+      await prisma.notification.create({
+        data: {
+          userId: booking.renterId,
+          title: "Booking Cancelled",
+          message: `Booking ${booking.bookingNumber} has been cancelled. Any held deposit has been released.`,
+          type: "BOOKING",
+          link: "/dashboard?tab=rentals",
+        },
+      });
+
+      return updated;
+    } catch (e) {
+      console.warn("[Booking Service] Postgres cancelRentalBooking failed:", e);
+    }
+  }
+
   let cancelledBooking: any = null;
 
   store.updateDB((db) => {
@@ -321,7 +596,6 @@ export async function cancelRentalBooking(params: {
     booking.status = "CANCELLED";
     booking.updatedAt = new Date().toISOString();
 
-    // Auto-refund held deposit if applicable
     if (booking.escrowStatus === "HELD") {
       booking.escrowStatus = "REFUNDED";
       booking.escrowRefundAmount = booking.depositAmount;

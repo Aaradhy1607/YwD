@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
+import { prisma } from "./prisma";
 import { store } from "@/services/store";
 import { generateAnonymousAlias, getRandomAvatarColor } from "./privacy";
 import { verifyPassword, checkRateLimit, logAuditEvent } from "./security";
@@ -43,19 +44,40 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           throw new Error("Too many login attempts. Please wait 1 minute before trying again.");
         }
 
-        const user = store.getDB().users.find((u) => u.email === email);
+        let user: any = null;
+        const isPg = await store.checkPostgres();
+        if (isPg) {
+          try {
+            user = await prisma.user.findUnique({
+              where: { email },
+              include: { anonymousProfile: true },
+            });
+          } catch (e) {
+            console.warn("[Auth] Postgres lookup failed, checking store fallback:", e);
+          }
+        }
+
+        if (!user) {
+          user = store.getDB().users.find((u) => u.email === email);
+        }
+
         if (!user) {
           return null;
         }
 
-        // If user has a passwordHash, verify cryptographically
+        // Cryptographic password verification
         if (user.passwordHash) {
           const isValid = verifyPassword(password, user.passwordHash);
           if (!isValid) {
             return null;
           }
-        } else if (password !== "demo1234" && email !== "demo@ywd.in") {
-          // Legacy or unhashed user
+        } else if (
+          process.env.NODE_ENV !== "production" &&
+          email === "demo@ywd.in" &&
+          password === "demo1234"
+        ) {
+          // Allow fallback only for non-production demo account
+        } else {
           return null;
         }
 
@@ -81,7 +103,37 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
       async authorize(credentials) {
         const email = ((credentials?.email as string) || "demo@ywd.in").toLowerCase().trim();
-        let user = store.getDB().users.find((u) => u.email === email);
+
+        // Security Guard: Prohibit administrative accounts from passwordless login
+        if (email === "admin@ywd.in" || email.includes("admin")) {
+          throw new Error("Administrative accounts cannot use passwordless demo login.");
+        }
+
+        // Security Guard: In production, passwordless demo login is disabled unless explicitly enabled
+        if (process.env.NODE_ENV === "production" && process.env.ENABLE_DEMO_LOGIN !== "true") {
+          throw new Error("Passwordless demo login is disabled in production.");
+        }
+
+        let user: any = null;
+
+        const isPg = await store.checkPostgres();
+        if (isPg) {
+          try {
+            user = await prisma.user.findUnique({
+              where: { email },
+              include: { anonymousProfile: true },
+            });
+          } catch {}
+        }
+
+        if (!user) {
+          user = store.getDB().users.find((u) => u.email === email);
+        }
+
+        // Double check: if user has ADMIN role, reject passwordless login
+        if (user && user.role === "ADMIN") {
+          throw new Error("Administrative accounts cannot use passwordless demo login.");
+        }
 
         if (!user) {
           user = {
@@ -127,18 +179,34 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const userId = (token.sub as string) || "usr_default_demo";
         session.user.id = userId;
 
-        const dbUser = store.getDB().users.find((u) => u.id === userId);
+        let dbUser: any = null;
+        const isPg = await store.checkPostgres();
+        if (isPg) {
+          try {
+            dbUser = await prisma.user.findUnique({
+              where: { id: userId },
+              include: { anonymousProfile: true },
+            });
+          } catch {}
+        }
+
+        if (!dbUser) {
+          dbUser = store.getDB().users.find((u) => u.id === userId);
+        }
+
         (session.user as any).role = dbUser?.role || "USER";
 
         // Attach anonymous public identity (strips PII from client)
-        const profile = store.getDB().anonymousProfiles.find((p) => p.userId === userId) || {
-          alias: "EcoRenter-4912",
-          avatarColor: "#18352D",
-          trustScore: 99.2,
-          completedRentals: 19,
-          isVerified: true,
-          campusHub: "Central Verified Locker • Hub A",
-        };
+        const profile =
+          dbUser?.anonymousProfile ||
+          store.getDB().anonymousProfiles.find((p) => p.userId === userId) || {
+            alias: "EcoRenter-4912",
+            avatarColor: "#18352D",
+            trustScore: 99.2,
+            completedRentals: 19,
+            isVerified: true,
+            campusHub: "Central Verified Locker • Hub A",
+          };
 
         (session.user as any).anonymousProfile = profile;
       }
