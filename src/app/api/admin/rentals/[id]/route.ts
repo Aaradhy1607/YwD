@@ -35,6 +35,12 @@ export async function POST(
       if (!rental) return NextResponse.json({ error: "Rental not found" }, { status: 404 });
 
       if (action === "MARK_PAID") {
+        if (rental.status !== "CREATED" && rental.status !== "PENDING") {
+          return NextResponse.json(
+            { error: `Cannot mark paid: current status is ${rental.status}` },
+            { status: 409 }
+          );
+        }
         const totalPaise = rental.rentPaise + rental.depositPaise;
         const updated = await (prisma as any).rental.update({
           where: { id },
@@ -47,6 +53,12 @@ export async function POST(
       }
 
       if (action === "REJECT") {
+        if (rental.status !== "CREATED" && rental.status !== "PENDING") {
+          return NextResponse.json(
+            { error: `Cannot reject: current status is ${rental.status}` },
+            { status: 409 }
+          );
+        }
         const updated = await (prisma as any).rental.update({
           where: { id },
           data: { status: "REJECTED" },
@@ -55,6 +67,12 @@ export async function POST(
       }
 
       if (action === "INSPECT") {
+        if (rental.status !== "ACTIVE") {
+          return NextResponse.json(
+            { error: `Cannot inspect: rental must be ACTIVE (current: ${rental.status})` },
+            { status: 409 }
+          );
+        }
         const dmg = Math.round(Number(damagePaise) || 0);
         if (dmg < 0 || dmg > rental.depositPaise) {
           return NextResponse.json(
@@ -75,6 +93,12 @@ export async function POST(
       }
 
       if (action === "MARK_REFUNDED") {
+        if (rental.status !== "INSPECT") {
+          return NextResponse.json(
+            { error: `Cannot refund: rental must be in INSPECT status (current: ${rental.status})` },
+            { status: 409 }
+          );
+        }
         const dmg = rental.damagePaise ?? 0;
         let refund: number;
         try {
@@ -105,6 +129,12 @@ export async function POST(
   const rental = db.rentals[idx];
 
   if (action === "MARK_PAID") {
+    if (rental.status !== "CREATED" && rental.status !== "PENDING") {
+      return NextResponse.json(
+        { error: `Cannot mark paid: current status is ${rental.status}` },
+        { status: 409 }
+      );
+    }
     let updated: any = null;
     store.updateDB((currentDb: any) => {
       const target = (currentDb.rentals || []).find((r: any) => r.id === id);
@@ -125,6 +155,12 @@ export async function POST(
   }
 
   if (action === "REJECT") {
+    if (rental.status !== "CREATED" && rental.status !== "PENDING") {
+      return NextResponse.json(
+        { error: `Cannot reject: current status is ${rental.status}` },
+        { status: 409 }
+      );
+    }
     let updated: any = null;
     store.updateDB((currentDb: any) => {
       const target = (currentDb.rentals || []).find((r: any) => r.id === id);
@@ -137,7 +173,19 @@ export async function POST(
   }
 
   if (action === "INSPECT") {
+    if (rental.status !== "ACTIVE") {
+      return NextResponse.json(
+        { error: `Cannot inspect: rental must be ACTIVE (current: ${rental.status})` },
+        { status: 409 }
+      );
+    }
     const dmg = Math.round(Number(damagePaise) || 0);
+    if (dmg < 0 || dmg > rental.depositPaise) {
+      return NextResponse.json(
+        { error: `damagePaise must be 0–${rental.depositPaise}` },
+        { status: 400 }
+      );
+    }
     let updated: any = null;
     store.updateDB((currentDb: any) => {
       const target = (currentDb.rentals || []).find((r: any) => r.id === id);
@@ -161,6 +209,12 @@ export async function POST(
   }
 
   if (action === "MARK_REFUNDED") {
+    if (rental.status !== "INSPECT") {
+      return NextResponse.json(
+        { error: `Cannot refund: rental must be in INSPECT status (current: ${rental.status})` },
+        { status: 409 }
+      );
+    }
     const dmg = rental.damagePaise ?? 0;
     let refund: number;
     try {
