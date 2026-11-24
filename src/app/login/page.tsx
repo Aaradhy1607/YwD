@@ -118,7 +118,7 @@ function LoginContent() {
     <div className="min-h-screen bg-[#F5F0E8] flex flex-col justify-between py-8 px-4 sm:px-6">
       {/* Top Header */}
       <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3 group">
+        <Link href="/marketplace" className="flex items-center gap-3 group">
           <div className="w-9 h-9 rounded-xl bg-[#C46A42] flex items-center justify-center text-white shadow-xs">
             <span className="font-bold text-sm">YwD</span>
           </div>
@@ -134,7 +134,7 @@ function LoginContent() {
         </Link>
 
         <Link
-          href="/"
+          href="/marketplace"
           className="text-xs font-semibold text-[#18352D] hover:text-[#C46A42] flex items-center gap-1.5 transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />

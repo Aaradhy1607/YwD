@@ -9,7 +9,7 @@ export function StandaloneHeader() {
     <header className="sticky top-0 z-40 border-b border-ywd-border bg-ywd-white/95 backdrop-blur-xl">
       <div className="mx-auto flex h-[76px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link
-          href="/"
+          href="/marketplace"
           className="group flex items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ywd-orange focus-visible:ring-offset-4 focus-visible:ring-offset-ywd-cream"
           aria-label="YwD home"
         >
@@ -20,7 +20,7 @@ export function StandaloneHeader() {
         </Link>
 
         <nav className="hidden items-center gap-7 md:flex" aria-label="Standalone navigation">
-          <Link href="/" className="text-[13px] font-medium text-ywd-muted transition-colors hover:text-ywd-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ywd-orange">
+          <Link href="/marketplace" className="text-[13px] font-medium text-ywd-muted transition-colors hover:text-ywd-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ywd-orange">
             Marketplace
           </Link>
           <Link href="/get-started" className="text-[13px] font-medium text-ywd-muted transition-colors hover:text-ywd-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ywd-orange">
@@ -53,7 +53,7 @@ export function StandaloneFooter() {
               <ShieldCheck className="h-3.5 w-3.5 text-ywd-sage" />
               Protected deposits
             </span>
-            <Link href="/" className="inline-flex items-center gap-1 text-ywd-cream transition-colors hover:text-ywd-orange-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ywd-orange">
+            <Link href="/marketplace" className="inline-flex items-center gap-1 text-ywd-cream transition-colors hover:text-ywd-orange-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ywd-orange">
               Marketplace <ArrowUpRight className="h-3.5 w-3.5" />
             </Link>
           </div>

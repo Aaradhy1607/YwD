@@ -150,7 +150,7 @@ export function AuthPageContent() {
             <div className="pointer-events-none absolute right-8 top-52 h-32 w-32 rounded-full border border-ywd-orange-light/30" aria-hidden="true" />
             <div className="pointer-events-none absolute left-6 right-6 top-44 h-px bg-gradient-to-r from-transparent via-ywd-sage-light/30 to-transparent" aria-hidden="true" />
             <div className="relative z-10">
-              <Link href="/" className="inline-flex items-center gap-2 text-xs font-semibold text-ywd-sage-light hover:text-ywd-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ywd-cream">
+              <Link href="/marketplace" className="inline-flex items-center gap-2 text-xs font-semibold text-ywd-sage-light hover:text-ywd-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ywd-cream">
                 <ArrowLeft className="h-3.5 w-3.5" />
                 Back to marketplace
               </Link>

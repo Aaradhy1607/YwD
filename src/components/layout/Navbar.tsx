@@ -197,6 +197,16 @@ export function Navbar({
               </button>
             );
           })}
+          <Link
+            href="/get-started"
+            className={`relative py-2 text-[13px] font-medium tracking-normal transition-colors whitespace-nowrap focus:outline-none ${
+              cosmicMode
+                ? "text-white/60 hover:text-white"
+                : "text-[#63736A] hover:text-[#18352D]"
+            }`}
+          >
+            Get Started
+          </Link>
 
           {/* My Rentals (visible in center on large screens when logged in) */}
           {isLoggedIn && (
@@ -555,7 +565,7 @@ export function Navbar({
             </div>
           ) : (
             <Link
-              href="/login"
+              href="/auth?tab=login"
               className="px-4 py-2 rounded-full border border-[#E5DEC9] hover:border-[#18352D] text-xs font-semibold text-[#18352D] transition-colors"
             >
               Sign in
@@ -618,6 +628,14 @@ export function Navbar({
                 </button>
               ))}
 
+              <Link
+                href="/get-started"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#18352D] hover:bg-[#FAF7F2] transition-colors"
+              >
+                Get Started
+              </Link>
+
               {onOpenGuidedDiscovery && (
                 <button
                   type="button"
@@ -652,6 +670,15 @@ export function Navbar({
 
             {/* Mobile Actions Bottom Rail */}
             <div className="pt-3 border-t border-[#E5DEC9] space-y-2">
+              {!isLoggedIn && (
+                <Link
+                  href="/auth?tab=login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full py-2.5 px-4 rounded-full border border-[#E5DEC9] text-[#18352D] text-xs font-semibold flex items-center justify-center transition-colors"
+                >
+                  Sign in
+                </Link>
+              )}
               <button
                 type="button"
                 onClick={() => {

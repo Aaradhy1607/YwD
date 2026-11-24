@@ -109,7 +109,7 @@ export default function GetStartedPage() {
                   Get Started <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
-                  href="/"
+                  href="/marketplace"
                   className="transition-luxury inline-flex h-12 items-center justify-center rounded-xl border border-ywd-cream/40 bg-ywd-forest-dark/45 px-6 text-sm font-semibold text-ywd-white shadow-ywd-subtle backdrop-blur-md hover:border-ywd-sage-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ywd-orange focus-visible:ring-offset-4 focus-visible:ring-offset-ywd-forest"
                 >
                   Browse Marketplace
