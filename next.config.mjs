@@ -4,6 +4,15 @@ const nextConfig = {
   experimental: {
     cpus: 1,
   },
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/get-started',
+        permanent: false,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {
