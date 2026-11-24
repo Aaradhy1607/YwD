@@ -125,7 +125,7 @@ export default function AdminDashboardPage() {
           </div>
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <Link
-              href="/login"
+              href="/auth?tab=login"
               className="flex-1 py-3 px-4 bg-[#C46A42] hover:bg-[#A8532F] text-white text-sm font-medium rounded-xl transition text-center"
             >
               Sign In as Admin
