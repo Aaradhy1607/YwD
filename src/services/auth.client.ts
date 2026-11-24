@@ -1,6 +1,9 @@
+export type AuthRole = "buyer" | "seller" | "super_admin";
+
 export interface LoginPayload {
   email: string;
   password: string;
+  role: AuthRole;
 }
 
 export interface RegisterPayload {
@@ -9,6 +12,7 @@ export interface RegisterPayload {
   password: string;
   confirmPassword: string;
   acceptedTerms: boolean;
+  role: AuthRole;
 }
 
 export interface AuthClientResult {

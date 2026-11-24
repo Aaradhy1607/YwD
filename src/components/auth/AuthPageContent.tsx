@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { AlertCircle, ArrowLeft, Check, Eye, EyeOff, LockKeyhole } from "lucide-react";
-import { loginUser, registerUser } from "@/services/auth.client";
+import { AuthRole, loginUser, registerUser } from "@/services/auth.client";
 import { StandaloneFooter, StandaloneHeader } from "@/components/landing/StandaloneChrome";
 import { AuthDoodles } from "@/components/landing/LandingDoodles";
 
@@ -32,6 +32,13 @@ export function AuthPageContent() {
   const [registerPassword, setRegisterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [role, setRole] = useState<AuthRole>("buyer");
+
+  const roleOptions: Array<{ value: AuthRole; label: string }> = [
+    { value: "buyer", label: "Buyer" },
+    { value: "seller", label: "Seller" },
+    { value: "super_admin", label: "Super Admin" },
+  ];
 
   const switchTab = (nextTab: Tab) => {
     setTab(nextTab);
@@ -69,7 +76,7 @@ export function AuthPageContent() {
     if (Object.keys(nextErrors).length > 0) return;
 
     setLoading(true);
-    await loginUser({ email: loginEmail, password: loginPassword });
+    await loginUser({ email: loginEmail, password: loginPassword, role });
     setStatus("Login details submitted.");
     setLoading(false);
   };
@@ -88,6 +95,7 @@ export function AuthPageContent() {
       password: registerPassword,
       confirmPassword,
       acceptedTerms,
+      role,
     });
     setStatus("Account details submitted.");
     setLoading(false);
@@ -97,6 +105,30 @@ export function AuthPageContent() {
     `w-full rounded-xl border bg-ywd-white px-3.5 py-3 text-sm text-ywd-forest placeholder:text-ywd-muted/70 shadow-ywd-subtle transition-luxury focus:outline-none focus:ring-2 focus:ring-ywd-orange focus:border-ywd-orange ${
       errors[field] ? "border-ywd-terracotta" : "border-ywd-border"
     }`;
+
+  const roleSelector = (
+    <fieldset>
+      <legend className="mb-1.5 block text-xs font-semibold text-ywd-forest">Choose account role</legend>
+      <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Account role">
+        {roleOptions.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            role="radio"
+            aria-checked={role === option.value}
+            onClick={() => setRole(option.value)}
+            className={`rounded-xl border px-2 py-2.5 text-xs font-semibold transition-luxury focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ywd-orange ${
+              role === option.value
+                ? "border-ywd-orange bg-ywd-orange/10 text-ywd-orange-dark"
+                : "border-ywd-border bg-ywd-white text-ywd-muted hover:border-ywd-sage hover:text-ywd-forest"
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  );
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-ywd-cream">
@@ -182,6 +214,7 @@ export function AuthPageContent() {
 
             {tab === "login" ? (
               <form className="mt-6 space-y-4" onSubmit={handleLoginSubmit} noValidate>
+                {roleSelector}
                 <div>
                   <label htmlFor="login-email" className="mb-1.5 block text-xs font-semibold text-ywd-forest">Email address</label>
                   <input
@@ -235,6 +268,7 @@ export function AuthPageContent() {
               </form>
             ) : (
               <form className="mt-6 space-y-4" onSubmit={handleRegisterSubmit} noValidate>
+                {roleSelector}
                 <div>
                   <label htmlFor="full-name" className="mb-1.5 block text-xs font-semibold text-ywd-forest">Full name</label>
                   <input id="full-name" type="text" value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Your full name" className={inputClass("fullName")} aria-invalid={Boolean(errors.fullName)} aria-describedby={errors.fullName ? "full-name-error" : undefined} />
