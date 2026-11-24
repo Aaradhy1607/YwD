@@ -3,6 +3,17 @@
 import React, { useEffect, useRef, type ReactNode } from "react";
 import Lenis from "lenis";
 
+// Suppress known Three.js v0.187+ internal deprecation warning triggered by @react-three/fiber
+if (typeof window !== "undefined") {
+  const originalWarn = console.warn;
+  console.warn = (...args: any[]) => {
+    if (typeof args[0] === "string" && args[0].includes("THREE.Clock: This module has been deprecated")) {
+      return;
+    }
+    originalWarn(...args);
+  };
+}
+
 interface SmoothScrollProviderProps {
   children: ReactNode;
 }

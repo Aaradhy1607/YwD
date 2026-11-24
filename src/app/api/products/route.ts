@@ -47,8 +47,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(listing, { status: 201 });
   } catch (error: any) {
     console.error("[API Products POST Error]:", error);
+    let errorMsg = error.message || "Invalid listing data";
+    if (error?.issues && Array.isArray(error.issues)) {
+      errorMsg = error.issues.map((i: any) => `${i.path.join('.') || 'field'}: ${i.message}`).join(', ');
+    }
     return NextResponse.json(
-      { error: error.message || "Invalid listing data" },
+      { error: errorMsg },
       { status: 400 }
     );
   }

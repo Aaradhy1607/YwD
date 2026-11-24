@@ -203,6 +203,7 @@ model Product {
 
   images             ProductImage[]
   bookings           RentalBooking[]
+  rentals            Rental[]
   purchaseOrders     PurchaseOrder[]
   cartItems          CartItem[]
   wishlistItems      WishlistItem[]
@@ -427,4 +428,51 @@ model AuditLog {
   @@index([userId])
   @@index([action])
   @@map("audit_logs")
+}
+
+enum RentalStatus {
+  CREATED
+  PENDING
+  ACTIVE
+  INSPECT
+  REFUNDED
+  REJECTED
+}
+
+enum LedgerEvent {
+  PAID
+  DAMAGE
+  REFUNDED
+}
+
+model Rental {
+  id           String        @id @default(cuid())
+  studentName  String        @map("student_name")
+  studentUpi   String?       @map("student_upi")
+  itemId       String        @map("item_id")
+  product      Product?      @relation(fields: [itemId], references: [id])
+  rentPaise    Int           @map("rent_paise")
+  depositPaise Int           @map("deposit_paise")
+  damagePaise  Int           @default(0) @map("damage_paise")
+  status       RentalStatus  @default(CREATED)
+  notes        String?
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  ledgerEntries LedgerEntry[]
+
+  @@map("rentals")
+}
+
+model LedgerEntry {
+  id          String      @id @default(cuid())
+  rentalId    String      @map("rental_id")
+  rental      Rental      @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  event       LedgerEvent
+  amountPaise Int         @map("amount_paise")
+  note        String?
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  @@index([rentalId])
+  @@map("ledger")
 }

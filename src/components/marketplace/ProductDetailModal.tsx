@@ -19,6 +19,7 @@ import {
   Info,
 } from "lucide-react";
 import { calculateRentalPrice, DurationTier, formatINR } from "@/lib/pricing";
+import { UpiCheckoutModal } from "@/components/marketplace/UpiCheckoutModal";
 
 interface ProductDetailModalProps {
   productId: string | null;
@@ -72,6 +73,7 @@ export function ProductDetailModal({
 
   const [processing, setProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [upiModalData, setUpiModalData] = useState<any>(null);
 
   // Fetch product data
   useEffect(() => {
@@ -141,7 +143,7 @@ export function ProductDetailModal({
       })
     : null;
 
-  // Handle Rental Booking
+  // Handle Rental Booking — UPI pilot flow
   const handleProceedBooking = async () => {
     if (!product) return;
     setProcessing(true);
@@ -156,38 +158,33 @@ export function ProductDetailModal({
         throw new Error("Please enter your complete delivery/shipping address.");
       }
 
-      const res = await fetch("/api/bookings", {
+      // Calculate days for backend
+      const msPerDay = 1000 * 60 * 60 * 24;
+      const days = Math.max(
+        1,
+        Math.round((new Date(endDate).getTime() - new Date(startDate).getTime()) / msPerDay)
+      );
+
+      // Backend creates rental + returns UPI link (amounts are backend-authoritative)
+      const res = await fetch("/api/rentals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           productId: product.id,
-          startDate: new Date(startDate).toISOString(),
-          endDate: new Date(endDate).toISOString(),
-          durationTier,
-          durationUnits,
-          deliveryMethod,
-          deliveryAddress: deliveryMethod === "DELIVERY" ? deliveryAddress : null,
+          days,
+          studentName: undefined, // backend uses session name
+          studentUpi: undefined,
         }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Failed to create booking");
+        throw new Error(data.error || "Failed to create rental");
       }
 
-      // Automatically trigger order creation in escrow & verify
-      await fetch("/api/payments/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          razorpayOrderId: `order_sim_${Date.now()}`,
-          razorpayPaymentId: `pay_sim_${Date.now()}`,
-          razorpaySignature: "dev_sig_verified_escrow",
-          bookingId: data.id,
-        }),
-      });
-
-      onBookingSuccess(data);
+      // Open UPI checkout modal
+      setUpiModalData({ ...data, productTitle: product.title });
+      setProcessing(false);
     } catch (err: any) {
       setErrorMsg(err.message || "Something went wrong.");
       setProcessing(false);
@@ -232,7 +229,18 @@ export function ProductDetailModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#202522]/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
+    <>
+      {upiModalData && (
+        <UpiCheckoutModal
+          rental={upiModalData}
+          onPaid={() => {
+            onBookingSuccess(upiModalData);
+            setUpiModalData(null);
+          }}
+          onClose={() => setUpiModalData(null)}
+        />
+      )}
+      <div className="fixed inset-0 z-50 overflow-y-auto bg-[#202522]/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
       <div className="bg-[#FFFFFF] w-full max-w-5xl rounded-3xl shadow-2xl border border-[#E5DEC9] overflow-hidden flex flex-col max-h-[92vh]">
         {/* Modal Top Bar */}
         <div className="bg-[#18352D] text-[#F5F0E8] px-6 py-4 flex items-center justify-between border-b border-[#2C483F] shrink-0">
@@ -625,8 +633,16 @@ export function ProductDetailModal({
                   )}
 
                   {errorMsg && (
-                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
-                      {errorMsg}
+                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium space-y-2">
+                      <p>{errorMsg}</p>
+                      {(errorMsg.toLowerCase().includes("authentication") || errorMsg.toLowerCase().includes("sign in")) && (
+                        <a
+                          href="/login"
+                          className="inline-block px-3 py-1 bg-[#18352D] text-white rounded-lg text-xs font-semibold hover:bg-[#234C40] transition"
+                        >
+                          Sign In / Demo Login &rarr;
+                        </a>
+                      )}
                     </div>
                   )}
 
@@ -697,8 +713,16 @@ export function ProductDetailModal({
                   </div>
 
                   {errorMsg && (
-                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
-                      {errorMsg}
+                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium space-y-2">
+                      <p>{errorMsg}</p>
+                      {(errorMsg.toLowerCase().includes("authentication") || errorMsg.toLowerCase().includes("sign in")) && (
+                        <a
+                          href="/login"
+                          className="inline-block px-3 py-1 bg-[#18352D] text-white rounded-lg text-xs font-semibold hover:bg-[#234C40] transition"
+                        >
+                          Sign In / Demo Login &rarr;
+                        </a>
+                      )}
                     </div>
                   )}
 
@@ -724,5 +748,6 @@ export function ProductDetailModal({
         )}
       </div>
     </div>
+    </>
   );
 }

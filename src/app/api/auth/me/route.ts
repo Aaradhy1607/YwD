@@ -6,14 +6,20 @@ import { sanitizeToAnonymousProfile } from "@/lib/privacy";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth();
+    let session: any = null;
+    try {
+      session = await auth();
+    } catch {
+      return NextResponse.json({ authenticated: false, user: null });
+    }
+
     if (!session || !session.user) {
-      return NextResponse.json({ authenticated: false, user: null }, { status: 401 });
+      return NextResponse.json({ authenticated: false, user: null });
     }
 
     const userId = session.user.id;
     if (!userId) {
-      return NextResponse.json({ authenticated: false, user: null }, { status: 401 });
+      return NextResponse.json({ authenticated: false, user: null });
     }
 
     const isPg = await store.checkPostgres();

@@ -17,17 +17,24 @@ import {
   RefreshCw,
   Search,
   Lock,
+  IndianRupee,
 } from "lucide-react";
+import { paiseToRupees } from "@/lib/payments/upi";
 
 export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [data, setData] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<"overview" | "products" | "bookings" | "disputes" | "users" | "audit">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "products" | "bookings" | "disputes" | "users" | "audit" | "upi-rentals">("overview");
   const [searchQuery, setSearchQuery] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+
+  // UPI Rentals state
+  const [upiRentals, setUpiRentals] = useState<any[]>([]);
+  const [upiLoading, setUpiLoading] = useState(false);
+  const [damageInputs, setDamageInputs] = useState<Record<string, string>>({});
 
   const fetchAdminData = async () => {
     setLoading(true);
@@ -51,8 +58,43 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const fetchUpiRentals = async () => {
+    setUpiLoading(true);
+    try {
+      const res = await fetch("/api/admin/rentals");
+      if (res.ok) {
+        const json = await res.json();
+        setUpiRentals(json.rentals || []);
+      }
+    } catch {}
+    setUpiLoading(false);
+  };
+
+  const handleRentalAction = async (id: string, action: string, damagePaise?: number) => {
+    setActionLoading(true);
+    try {
+      const body: any = { action };
+      if (damagePaise !== undefined) body.damagePaise = damagePaise;
+      const res = await fetch(`/api/admin/rentals/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        setActionMessage(`Rental ${id}: action ${action} applied.`);
+        fetchUpiRentals();
+      } else {
+        const err = await res.json();
+        setActionMessage(`Error: ${err.error}`);
+      }
+    } catch {}
+    setActionLoading(false);
+    setTimeout(() => setActionMessage(null), 5000);
+  };
+
   useEffect(() => {
     fetchAdminData();
+    fetchUpiRentals();
   }, []);
 
   const handleToggleProduct = async (id: string) => {
@@ -260,6 +302,7 @@ export default function AdminDashboardPage() {
             { id: "disputes", label: `Dispute Resolution (${disputes?.length || 0})`, icon: AlertTriangle },
             { id: "users", label: `Member Accounts (${users?.length || 0})`, icon: Users },
             { id: "audit", label: `Security Audit Trail (${auditLogs?.length || 0})`, icon: FileText },
+            { id: "upi-rentals", label: `UPI Rentals (${upiRentals.length})`, icon: DollarSign },
           ].map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -589,6 +632,159 @@ export default function AdminDashboardPage() {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {/* TAB 7: UPI RENTALS */}
+        {activeTab === "upi-rentals" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-serif text-lg text-white">UPI Pilot Rentals</h3>
+              <button
+                onClick={fetchUpiRentals}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-[#18352D] hover:bg-[#234C40] border border-[#234C40] text-xs font-mono text-[#789681] hover:text-white transition"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${upiLoading ? "animate-spin" : ""}`} />
+                <span>Refresh</span>
+              </button>
+            </div>
+
+            {upiRentals.length === 0 ? (
+              <div className="py-12 text-center text-[#789681] font-mono text-sm bg-[#18352D]/60 border border-[#234C40] rounded-xl">
+                No UPI rentals yet.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {upiRentals.map((r: any) => {
+                  const statusColors: Record<string, string> = {
+                    CREATED: "bg-blue-900/40 text-blue-300 border-blue-500/30",
+                    PENDING: "bg-amber-900/40 text-amber-300 border-amber-500/30",
+                    ACTIVE: "bg-emerald-900/40 text-emerald-300 border-emerald-500/30",
+                    INSPECT: "bg-purple-900/40 text-purple-300 border-purple-500/30",
+                    REFUNDED: "bg-[#234C40] text-[#789681] border-[#234C40]",
+                    REJECTED: "bg-red-900/40 text-red-300 border-red-500/30",
+                  };
+                  return (
+                    <div
+                      key={r.id}
+                      className="bg-[#18352D]/60 border border-[#234C40] rounded-xl p-5 space-y-3"
+                    >
+                      {/* Header row */}
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <span className="text-xs font-mono text-[#C46A42]">#{r.id}</span>
+                          <h4 className="text-base font-semibold text-white mt-0.5">
+                            {r.product?.title || r.productId}
+                          </h4>
+                          <p className="text-sm text-[#789681]">
+                            Student: {r.studentName} &middot; Amt:{" "}
+                            {paiseToRupees(r.totalPaise)} (Deposit:{" "}
+                            {paiseToRupees(r.depositPaise)})
+                          </p>
+                          <p className="text-xs text-[#63736A] font-mono">
+                            {new Date(r.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <span
+                          className={`px-2.5 py-1 rounded text-xs font-mono border ${statusColors[r.status] || ""}`}
+                        >
+                          {r.status}
+                        </span>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex flex-wrap gap-2 pt-2 border-t border-[#234C40]">
+                        {(r.status === "CREATED" || r.status === "PENDING") && (
+                          <>
+                            <button
+                              disabled={actionLoading}
+                              onClick={() => handleRentalAction(r.id, "MARK_PAID")}
+                              className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-medium rounded transition"
+                            >
+                              Mark as Paid
+                            </button>
+                            <button
+                              disabled={actionLoading}
+                              onClick={() => handleRentalAction(r.id, "REJECT")}
+                              className="px-3 py-1.5 bg-red-800 hover:bg-red-700 text-white text-xs font-medium rounded transition"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+
+                        {r.status === "ACTIVE" && (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min={0}
+                              max={r.depositPaise}
+                              placeholder="Damage (paise)"
+                              value={damageInputs[r.id] || ""}
+                              onChange={(e) =>
+                                setDamageInputs((prev) => ({ ...prev, [r.id]: e.target.value }))
+                              }
+                              className="w-36 px-2 py-1.5 bg-[#0E1F1A] border border-[#234C40] text-white text-xs rounded font-mono"
+                            />
+                            <button
+                              disabled={actionLoading}
+                              onClick={() =>
+                                handleRentalAction(
+                                  r.id,
+                                  "INSPECT",
+                                  Math.round(Number(damageInputs[r.id] || 0))
+                                )
+                              }
+                              className="px-3 py-1.5 bg-purple-700 hover:bg-purple-600 text-white text-xs font-medium rounded transition"
+                            >
+                              Mark Returned + Inspect
+                            </button>
+                          </div>
+                        )}
+
+                        {r.status === "INSPECT" && (
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs text-[#789681]">
+                              Refund: {paiseToRupees(r.depositPaise - (r.damagePaise || 0))}
+                            </span>
+                            <button
+                              disabled={actionLoading}
+                              onClick={() => handleRentalAction(r.id, "MARK_REFUNDED")}
+                              className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-medium rounded transition"
+                            >
+                              Mark as Refunded
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Ledger entries */}
+                      {r.ledger && r.ledger.length > 0 && (
+                        <details className="pt-1">
+                          <summary className="text-xs font-mono text-[#789681] cursor-pointer hover:text-white">
+                            Ledger ({r.ledger.length} entries)
+                          </summary>
+                          <div className="mt-2 space-y-1">
+                            {r.ledger.map((entry: any) => (
+                              <div
+                                key={entry.id}
+                                className="flex justify-between text-xs font-mono px-3 py-1.5 bg-[#0E1F1A] rounded border border-[#234C40]"
+                              >
+                                <span className="text-[#789681]">{entry.event}</span>
+                                <span className="text-white">{paiseToRupees(entry.amountPaise)}</span>
+                                <span className="text-[#63736A]">
+                                  {new Date(entry.createdAt).toLocaleString()}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </main>
