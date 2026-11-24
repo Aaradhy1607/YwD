@@ -62,6 +62,7 @@ export async function POST(req: NextRequest) {
         data: {
           id: orderId,
           itemId: productId,
+          userId,
           studentName: studentName || session?.user?.name || "Student (Demo)",
           studentUpi: studentUpi || null,
           rentPaise,
@@ -161,6 +162,7 @@ export async function GET() {
   if (isPg) {
     try {
       const rentals = await (prisma as any).rental.findMany({
+        where: { userId },
         include: {
           product: { select: { title: true } },
           ledgerEntries: true,

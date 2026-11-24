@@ -20,8 +20,8 @@ export async function POST(
     try {
       const rental = await (prisma as any).rental.findUnique({ where: { id } });
       if (!rental) return NextResponse.json({ error: "Rental not found" }, { status: 404 });
-      if (rental.userId && rental.userId !== userId && process.env.NODE_ENV === "production") {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      if (!rental.userId || rental.userId !== userId) {
+        return NextResponse.json({ error: "Forbidden: You do not own this rental" }, { status: 403 });
       }
       if (rental.status !== "CREATED") {
         return NextResponse.json(
@@ -46,8 +46,8 @@ export async function POST(
   const idx = (db.rentals || []).findIndex((r: any) => r.id === id);
   if (idx === -1) return NextResponse.json({ error: "Rental not found" }, { status: 404 });
   const rental = db.rentals[idx];
-  if (rental.userId && rental.userId !== userId && process.env.NODE_ENV === "production") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!rental.userId || rental.userId !== userId) {
+    return NextResponse.json({ error: "Forbidden: You do not own this rental" }, { status: 403 });
   }
   if (rental.status !== "CREATED") {
     return NextResponse.json({ error: `Cannot mark paid: status is ${rental.status}` }, { status: 409 });
