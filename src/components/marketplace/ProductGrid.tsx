@@ -54,7 +54,7 @@ export function ProductGrid({
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8 pb-6 border-b border-[#E5DEC9]">
         <div>
           <div className="flex items-center gap-2.5 mb-1.5">
-            <h2 className="font-semibold text-2xl sm:text-3xl text-[#18352D] tracking-tight">
+            <h2 className="font-editorial text-3xl sm:text-4xl text-[#18352D] tracking-tight">
               {activeCategoryName}
             </h2>
             <span className="px-2.5 py-0.5 rounded-md text-xs font-mono font-medium bg-[#FAF7F2] text-[#18352D] border border-[#E5DEC9]">
@@ -150,11 +150,12 @@ export function ProductGrid({
         </div>
       ) : (
         <div className={gridColsClass}>
-          {products.map((product) => (
+          {products.map((product, index) => (
             <ProductCard
               key={product.id}
               product={product}
               durationTier={preferredDuration}
+              featured={embedded && products.length >= 4 && index === 0}
               isWishlisted={wishlistIds.includes(product.id)}
               onToggleWishlist={onToggleWishlist}
               onOpenDetail={onOpenProductDetail}

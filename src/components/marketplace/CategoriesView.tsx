@@ -13,8 +13,18 @@ import {
   Cpu,
   Camera,
   GraduationCap,
+  Compass,
 } from "lucide-react";
 import { formatINR } from "@/lib/pricing";
+
+const CATEGORY_HERO_IMAGES: Record<string, string> = {
+  electronics: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=900&q=80",
+  education: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=900&q=80",
+  "college-essentials": "https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=900&q=80",
+  lifestyle: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=900&q=80",
+  "sports-fitness": "https://images.unsplash.com/photo-1532298229144-0ec0c57515c7?auto=format&fit=crop&w=900&q=80",
+  "events-entertainment": "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=900&q=80",
+};
 
 interface CategoriesViewProps {
   categories: any[];
@@ -95,13 +105,13 @@ export function CategoriesView({
 
   const curatedProducts = categoryProducts.slice(0, 4);
 
-  // 3 Purpose-driven Use-Case Collections mapped to real taxonomy/products
+  // 4 Purpose-driven Use-Case Collections mapped to real taxonomy/products
   const collections = useMemo(
     () => [
       {
-        id: "hackathon-ml",
-        title: "Hackathon & ML Kit",
-        subtitle: "Workstations, tablets, and high-compute laptops",
+        id: "build-something",
+        title: "Build Something",
+        subtitle: "Workstations, tablets, and engineering kits",
         icon: Cpu,
         count: allProducts.filter(
           (p) =>
@@ -111,9 +121,9 @@ export function CategoriesView({
         action: { categorySlug: "electronics", subcategorySlug: "laptops" },
       },
       {
-        id: "film-thesis",
-        title: "Film & Thesis Shoot",
-        subtitle: "Mirrorless bodies, optics, audio, and production gear",
+        id: "create-something",
+        title: "Create Something",
+        subtitle: "Mirrorless bodies, optics, audio, and stage gear",
         icon: Camera,
         count: allProducts.filter(
           (p) =>
@@ -123,12 +133,22 @@ export function CategoriesView({
         action: { categorySlug: "electronics", subcategorySlug: "cameras" },
       },
       {
-        id: "exam-essentials",
-        title: "Exam Week Essentials",
-        subtitle: "Graphing calculators, textbooks, and lab kits",
+        id: "prepare-exams",
+        title: "Prepare for Exams",
+        subtitle: "Graphing calculators, textbooks, and study guides",
         icon: GraduationCap,
         count: allProducts.filter((p) => p.categorySlug === "education").length,
         action: { categorySlug: "education", subcategorySlug: "all" },
+      },
+      {
+        id: "explore-new",
+        title: "Explore Something New",
+        subtitle: "Bicycles, fitness gear, and campus travel essentials",
+        icon: Compass,
+        count: allProducts.filter((p) =>
+          ["sports-fitness", "lifestyle"].includes(p.categorySlug)
+        ).length,
+        action: { categorySlug: "sports-fitness", subcategorySlug: "all" },
       },
     ],
     [allProducts]
@@ -141,7 +161,7 @@ export function CategoriesView({
         <p className="text-xs font-medium text-[#C46A42] mb-1.5">
           Editorial directory
         </p>
-        <h1 className="font-semibold text-3xl sm:text-4xl text-[#18352D] tracking-tight">
+        <h1 className="font-editorial text-3xl sm:text-5xl text-[#18352D] tracking-tight">
           Browse by equipment class or study goal
         </h1>
         <p className="text-sm text-[#63736A] mt-2 leading-relaxed">
@@ -149,8 +169,8 @@ export function CategoriesView({
         </p>
       </div>
 
-      {/* 3 Compact Horizontal Use-Case Collections */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* 4 Compact Horizontal Use-Case Collections */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {collections.map((col) => {
           const ColIcon = col.icon;
           return (
@@ -250,32 +270,44 @@ export function CategoriesView({
 
         {/* RIGHT PANEL: Selected Category Hero, Subcategories & Curated Products */}
         {activeCategory && (
-          <div className="lg:col-span-8 bg-[#FAF7F2] rounded-2xl border border-[#E5DEC9] p-6 sm:p-8 space-y-8">
-            {/* Category Hero Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#E5DEC9]">
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2.5">
-                  <h2 className="font-semibold text-2xl text-[#18352D] tracking-tight">
+          <div className="lg:col-span-8 bg-[#FAF7F2] rounded-2xl border border-[#E5DEC9] overflow-hidden">
+            {/* Category Hero Banner */}
+            <div className="relative h-44 sm:h-52 bg-[#EAE2D5] overflow-hidden">
+              <img
+                src={
+                  CATEGORY_HERO_IMAGES[activeCategory.slug] ||
+                  CATEGORY_HERO_IMAGES.electronics
+                }
+                alt={activeCategory.name}
+                loading="lazy"
+                decoding="async"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#18352D]/90 via-[#18352D]/40 to-transparent" />
+              <div className="absolute bottom-5 left-6 right-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <div>
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-[#D6E0D9]">
+                    {categoryCounts[activeCategory.slug] ?? 0} verified listings
+                  </span>
+                  <h2 className="font-editorial text-2xl sm:text-3xl text-white tracking-tight mt-0.5">
                     {activeCategory.name}
                   </h2>
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-mono bg-[#FFFFFF] text-[#18352D] border border-[#E5DEC9]">
-                    {categoryCounts[activeCategory.slug] ?? 0} listings
-                  </span>
                 </div>
-                <p className="text-xs sm:text-sm text-[#63736A] max-w-xl leading-relaxed">
-                  {activeCategory.description}
-                </p>
+                <button
+                  type="button"
+                  onClick={() => onExploreCategory(activeCategory.slug)}
+                  className="px-5 py-2.5 rounded-xl bg-[#C46A42] hover:bg-[#A8532F] text-white font-semibold text-xs flex items-center gap-2 self-start sm:self-auto transition-colors shrink-0"
+                >
+                  <span>View all in {activeCategory.name}</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
               </div>
-
-              <button
-                type="button"
-                onClick={() => onExploreCategory(activeCategory.slug)}
-                className="px-5 py-2.5 rounded-xl bg-[#C46A42] hover:bg-[#A8532F] text-white font-semibold text-xs flex items-center gap-2 self-start sm:self-auto transition-colors shrink-0"
-              >
-                <span>View all in {activeCategory.name}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
             </div>
+
+            <div className="p-6 sm:p-8 space-y-8">
+              <p className="text-xs sm:text-sm text-[#63736A] max-w-2xl leading-relaxed">
+                {activeCategory.description}
+              </p>
 
             {/* Subcategories (Non-empty only) */}
             <div className="space-y-3">
@@ -385,6 +417,7 @@ export function CategoriesView({
                   })}
                 </div>
               )}
+            </div>
             </div>
           </div>
         )}

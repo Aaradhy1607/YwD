@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Package,
   Clock,
@@ -68,6 +68,10 @@ export function UserDashboard({
   onExplore,
 }: UserDashboardProps) {
   const [activeTab, setActiveTab] = useState(initialTab);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [revealedOtpIds, setRevealedOtpIds] = useState<Record<string, boolean>>({});
   const [actionFeedback, setActionFeedback] = useState<{
@@ -183,7 +187,7 @@ export function UserDashboard({
           </div>
           <div className="space-y-0.5">
             <div className="flex items-center gap-2.5">
-              <h1 className="font-semibold text-xl sm:text-2xl text-white tracking-tight">
+              <h1 className="font-editorial text-2xl sm:text-3xl text-white tracking-tight">
                 {userAlias}
               </h1>
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#FAF7F2]/10 text-[#D6E0D9] border border-white/15">

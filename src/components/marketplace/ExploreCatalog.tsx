@@ -321,7 +321,7 @@ export function ExploreCatalog({
   return (
     <div className="min-h-screen bg-[#F5F0E8]">
       {/* STICKY COMPACT FILTER BAR DIRECTLY BELOW NAVBAR */}
-      <div className="sticky top-[72px] sm:top-[76px] z-30 bg-[#FAF7F2] border-b border-[#E5DEC9]">
+      <div className="sticky top-16 z-30 bg-[#FAF7F2] border-b border-[#E5DEC9]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 space-y-2.5 lg:space-y-0 lg:flex lg:items-center lg:justify-between lg:gap-4">
           {/* Horizontal Category Pills */}
           <div

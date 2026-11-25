@@ -67,6 +67,14 @@ export function Navbar({
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -116,13 +124,19 @@ export function Navbar({
 
   return (
     <header
-      className={`sticky top-0 z-40 border-b transition-colors duration-300 shadow-sm ${
+      className={`sticky top-0 z-40 border-b transition-all duration-200 ${
         cosmicMode
           ? "bg-[#060A08] border-white/10 text-white shadow-black/60"
-          : "bg-[#FFFFFF] border-[#E5DEC9] text-[#18352D] shadow-[0_1px_3px_0_rgba(24,53,45,0.03)]"
+          : scrolled
+          ? "bg-[#FFFFFF] border-[#E5DEC9] text-[#18352D] shadow-sm"
+          : "bg-[#FFFFFF] border-[#E5DEC9] text-[#18352D]"
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 sm:h-[76px] flex items-center justify-between gap-4">
+      <div
+        className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4 transition-[height] duration-200 ${
+          scrolled ? "h-16" : "h-18 sm:h-[76px]"
+        }`}
+      >
         {/* ========================================================
             LEFT — BRAND
            ======================================================== */}
@@ -168,11 +182,8 @@ export function Navbar({
                 key={item.id}
                 type="button"
                 onClick={() => {
-                  if (item.id === "trust" && activeScreen === "home") {
-                    document.getElementById("scenario-calculator")?.scrollIntoView({ behavior: "smooth" });
-                  } else {
-                    setActiveScreen(item.id);
-                  }
+                  setActiveScreen(item.id);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
                 className={`relative py-2 text-[13px] font-medium tracking-normal transition-colors whitespace-nowrap focus:outline-none ${
                   isActive

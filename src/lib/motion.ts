@@ -16,10 +16,10 @@ export const EASING = {
 } as const;
 
 export const DURATION = {
-  fast: 0.18,
-  normal: 0.32,
-  slow: 0.55,
-  hero: 0.85,
+  fast: 0.16,
+  normal: 0.26,
+  slow: 0.45,
+  hero: 0.65,
 } as const;
 
 /**

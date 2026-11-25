@@ -18,6 +18,7 @@ import { ReturnInspectionModal } from "@/components/inspection/ReturnInspectionM
 import { TrustSection } from "@/components/trust/TrustSection";
 import { AccessProtocol } from "@/components/trust/AccessProtocol";
 import { CuratedSpotlight } from "@/components/marketplace/CuratedSpotlight";
+import { EditorialShowcase } from "@/components/marketplace/EditorialShowcase";
 import { ExploreCatalog } from "@/components/marketplace/ExploreCatalog";
 import { GuidedDiscoveryModal } from "@/components/marketplace/GuidedDiscoveryModal";
 import { SEED_CATEGORIES, SEED_PRODUCTS } from "@/data/seedData";
@@ -409,6 +410,13 @@ export default function YwDApp() {
                 />
               </div>
 
+              {/* Editorial Showcase: Curated for Campus, Recently Added & Community Favorites */}
+              <EditorialShowcase
+                products={allProducts.length > 0 ? allProducts : SEED_PRODUCTS}
+                onOpenProductDetail={handleOpenDetail}
+                onExplore={() => setActiveScreen("explore")}
+              />
+
               {/* Equipment Categories */}
               <div id="category-grid">
                 <CategoryGrid
@@ -601,7 +609,12 @@ export default function YwDApp() {
       </main>
 
       {/* Footer */}
-      <Footer onNavigate={setActiveScreen} />
+      <Footer
+        onNavigate={(screen) => {
+          setActiveScreen(screen);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+      />
 
       {/* MODALS WITH SMOOTH MOTION */}
 
