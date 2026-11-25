@@ -3,7 +3,41 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { store } from "@/services/store";
 import { buildUpiLink, buildQrUrl, rupeesToPaise } from "@/lib/payments/upi";
+import { calculateRentalPrice, DurationTier } from "@/lib/pricing";
 import { randomUUID } from "crypto";
+
+let hasCheckedUserIdColumn = false;
+async function ensureUserIdColumn(): Promise<boolean> {
+  if (hasCheckedUserIdColumn) return true;
+  try {
+    await (prisma as any).$executeRawUnsafe(
+      'ALTER TABLE "rentals" ADD COLUMN IF NOT EXISTS "user_id" TEXT DEFAULT \'usr_default_demo\';'
+    );
+    try {
+      await (prisma as any).$executeRawUnsafe(
+        'CREATE INDEX IF NOT EXISTS "rentals_user_id_idx" ON "rentals"("user_id");'
+      );
+    } catch {}
+    hasCheckedUserIdColumn = true;
+    return true;
+  } catch (err: any) {
+    return false;
+  }
+}
+
+async function backfillLegacyRentals(): Promise<void> {
+  try {
+    await (prisma as any).$executeRawUnsafe(`
+      UPDATE "rentals" r
+      SET "user_id" = u."id"
+      FROM "users" u
+      WHERE (r."user_id" = 'usr_default_demo' OR r."user_id" IS NULL)
+        AND u."name" IS NOT NULL
+        AND r."student_name" = u."name"
+        AND r."student_name" != 'Student (Demo)'
+    `);
+  } catch {}
+}
 
 export async function POST(req: NextRequest) {
   let session: any = null;
@@ -24,7 +58,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { productId, studentName, studentUpi, days } = body;
+  const {
+    productId,
+    studentName,
+    studentUpi,
+    days,
+    durationTier = "daily",
+    durationUnits,
+    deliveryMethod = "PICKUP",
+  } = body;
   if (!productId) {
     return NextResponse.json({ error: "productId is required" }, { status: 400 });
   }
@@ -42,11 +84,28 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Product is not available for rent" }, { status: 409 });
       }
 
-      // Backend-authoritative amount calculation (paise)
-      const daysCount = Math.max(1, Math.round(Number(days) || 1));
-      const rentPaise = rupeesToPaise(product.rentalPriceDaily * daysCount);
-      const depositPaise = rupeesToPaise(product.deposit);
-      const totalPaise = rentPaise + depositPaise;
+      // Backend-authoritative amount calculation with tier rates, delivery, platform fee, and GST
+      const units = Math.max(1, Math.round(Number(durationUnits) || Number(days) || 1));
+      const method = deliveryMethod === "DELIVERY" ? "DELIVERY" : "PICKUP";
+
+      const pricing = calculateRentalPrice({
+        rates: {
+          hourly: product.rentalPriceHourly || Math.round(product.rentalPriceDaily / 6),
+          daily: product.rentalPriceDaily,
+          weekly: product.rentalPriceWeekly,
+          monthly: product.rentalPriceMonthly || Math.round(product.rentalPriceWeekly * 3.4),
+          semester: product.rentalPriceSemester || Math.round(product.rentalPriceWeekly * 8.5),
+          deposit: product.deposit,
+        },
+        durationTier: (durationTier as DurationTier) || "daily",
+        durationUnits: units,
+        deliveryMethod: method,
+        customDeliveryFee: method === "DELIVERY" ? 99 : 0,
+      });
+
+      const depositPaise = rupeesToPaise(pricing.securityDeposit);
+      const totalPaise = rupeesToPaise(pricing.totalPayable);
+      const rentPaise = totalPaise - depositPaise;
 
       const orderId = randomUUID().replace(/-/g, "").slice(0, 16).toUpperCase();
 
@@ -58,17 +117,54 @@ export async function POST(req: NextRequest) {
       }
       const qrUrl = buildQrUrl(upiLink);
 
-      const rental = await (prisma as any).rental.create({
-        data: {
-          id: orderId,
-          itemId: productId,
-          studentName: studentName || session?.user?.name || "Student (Demo)",
-          studentUpi: studentUpi || null,
-          rentPaise,
-          depositPaise,
-          status: "CREATED",
-        },
-      });
+      await ensureUserIdColumn();
+
+      let rental: any;
+      try {
+        rental = await (prisma as any).rental.create({
+          data: {
+            id: orderId,
+            itemId: productId,
+            userId,
+            studentName: studentName || session?.user?.name || "Student (Demo)",
+            studentUpi: studentUpi || null,
+            rentPaise,
+            depositPaise,
+            status: "CREATED",
+          },
+        });
+      } catch (insertErr: any) {
+        const msg = String(insertErr?.message || "").toLowerCase();
+        if (
+          msg.includes("user_id") ||
+          msg.includes("does not exist") ||
+          insertErr?.code === "P2021" ||
+          insertErr?.code === "P2022"
+        ) {
+          await (prisma as any).$executeRawUnsafe(
+            `INSERT INTO "rentals" ("id", "item_id", "student_name", "student_upi", "rent_paise", "deposit_paise", "status", "created_at", "updated_at")
+             VALUES ($1, $2, $3, $4, $5, $6, 'CREATED', NOW(), NOW())`,
+            orderId,
+            productId,
+            studentName || session?.user?.name || "Student (Demo)",
+            studentUpi || null,
+            rentPaise,
+            depositPaise
+          );
+          rental = {
+            id: orderId,
+            itemId: productId,
+            userId,
+            studentName: studentName || session?.user?.name || "Student (Demo)",
+            studentUpi: studentUpi || null,
+            rentPaise,
+            depositPaise,
+            status: "CREATED",
+          };
+        } else {
+          throw insertErr;
+        }
+      }
 
       return NextResponse.json({
         id: rental.id,
@@ -80,6 +176,7 @@ export async function POST(req: NextRequest) {
         totalPaise,
         status: rental.status,
         productTitle: product.title,
+        pricing,
       });
     } catch (e: any) {
       console.error("[POST /api/rentals] PG error:", e);
@@ -95,10 +192,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    const daysCount = Math.max(1, Math.round(Number(days) || 1));
-    const rentPaise = rupeesToPaise((product.rentalPriceDaily || 0) * daysCount);
-    const depositPaise = rupeesToPaise(product.deposit || 0);
-    const totalPaise = rentPaise + depositPaise;
+    const units = Math.max(1, Math.round(Number(durationUnits) || Number(days) || 1));
+    const method = deliveryMethod === "DELIVERY" ? "DELIVERY" : "PICKUP";
+
+    const pricing = calculateRentalPrice({
+      rates: {
+        hourly: product.rentalPriceHourly || Math.round((product.rentalPriceDaily || 0) / 6),
+        daily: product.rentalPriceDaily || 0,
+        weekly: product.rentalPriceWeekly || 0,
+        monthly: product.rentalPriceMonthly || Math.round((product.rentalPriceWeekly || 0) * 3.4),
+        semester: product.rentalPriceSemester || Math.round((product.rentalPriceWeekly || 0) * 8.5),
+        deposit: product.deposit || 0,
+      },
+      durationTier: (durationTier as DurationTier) || "daily",
+      durationUnits: units,
+      deliveryMethod: method,
+      customDeliveryFee: method === "DELIVERY" ? 99 : 0,
+    });
+
+    const depositPaise = rupeesToPaise(pricing.securityDeposit);
+    const totalPaise = rupeesToPaise(pricing.totalPayable);
+    const rentPaise = totalPaise - depositPaise;
 
     const orderId = randomUUID().replace(/-/g, "").slice(0, 16).toUpperCase();
     let upiLink: string;
@@ -138,6 +252,7 @@ export async function POST(req: NextRequest) {
       totalPaise,
       status: rental.status,
       productTitle: product.title,
+      pricing,
     });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || "Failed to create rental" }, { status: 500 });
@@ -160,13 +275,65 @@ export async function GET() {
 
   if (isPg) {
     try {
-      const rentals = await (prisma as any).rental.findMany({
-        include: {
-          product: { select: { title: true } },
-          ledgerEntries: true,
-        },
-        orderBy: { createdAt: "desc" },
-      });
+      await ensureUserIdColumn();
+      await backfillLegacyRentals();
+
+      if (session?.user?.name && session.user.name !== "Student (Demo)") {
+        try {
+          await (prisma as any).rental.updateMany({
+            where: {
+              userId: "usr_default_demo",
+              studentName: session.user.name,
+            },
+            data: { userId },
+          });
+        } catch {}
+      }
+
+      let rentals: any[] = [];
+      try {
+        const whereClause =
+          userId === "usr_default_demo"
+            ? { userId: "usr_default_demo", studentName: "Student (Demo)" }
+            : { userId };
+
+        rentals = await (prisma as any).rental.findMany({
+          where: whereClause,
+          include: {
+            product: { select: { title: true } },
+            ledgerEntries: true,
+          },
+          orderBy: { createdAt: "desc" },
+        });
+      } catch (queryErr: any) {
+        const msg = String(queryErr?.message || "").toLowerCase();
+        if (
+          msg.includes("user_id") ||
+          msg.includes("does not exist") ||
+          queryErr?.code === "P2021" ||
+          queryErr?.code === "P2022"
+        ) {
+          const rawRentals = await (prisma as any).$queryRawUnsafe(
+            `SELECT r."id", r."item_id" as "itemId", r."student_name" as "studentName", 
+                    r."student_upi" as "studentUpi", r."rent_paise" as "rentPaise", 
+                    r."deposit_paise" as "depositPaise", r."damage_paise" as "damagePaise", 
+                    r."status", r."created_at" as "createdAt", r."updated_at" as "updatedAt",
+                    p."title" as "productTitle"
+             FROM "rentals" r
+             LEFT JOIN "products" p ON r."item_id" = p."id"
+             ORDER BY r."created_at" DESC`
+          );
+          rentals = (rawRentals as any[]).map((r: any) => ({
+            ...r,
+            userId,
+            product: { title: r.productTitle },
+            ledgerEntries: [],
+          }));
+        } else {
+          throw queryErr;
+        }
+      }
+
       return NextResponse.json({
         rentals: rentals.map((r: any) => ({
           ...r,
@@ -180,6 +347,36 @@ export async function GET() {
   }
 
   const db = store.getDB() as any;
-  const rentals = (db.rentals || []).filter((r: any) => r.userId === userId);
+  if (!db.rentals) db.rentals = [];
+
+  // Handle records without userId or assigned to shared demo in fallback store before applying owner filter
+  let dbModified = false;
+  for (const r of db.rentals) {
+    if (!r.userId || (r.userId === "usr_default_demo" && r.studentName !== "Student (Demo)")) {
+      const matched = (db.users || []).find(
+        (u: any) => u.name && u.name === r.studentName && u.name !== "Student (Demo)"
+      );
+      if (matched) {
+        r.userId = matched.id;
+        dbModified = true;
+      } else if (session?.user?.name && r.studentName === session.user.name) {
+        r.userId = userId;
+        dbModified = true;
+      } else if (!r.userId) {
+        r.userId = "usr_default_demo";
+        dbModified = true;
+      }
+    }
+  }
+  if (dbModified) {
+    store.updateDB(() => {});
+  }
+
+  const rentals = (db.rentals || []).filter((r: any) => {
+    if (userId === "usr_default_demo") {
+      return r.userId === "usr_default_demo" && r.studentName === "Student (Demo)";
+    }
+    return r.userId === userId;
+  });
   return NextResponse.json({ rentals });
 }

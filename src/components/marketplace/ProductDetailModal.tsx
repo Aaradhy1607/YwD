@@ -171,6 +171,9 @@ export function ProductDetailModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           productId: product.id,
+          durationTier,
+          durationUnits,
+          deliveryMethod,
           days,
           studentName: undefined, // backend uses session name
           studentUpi: undefined,

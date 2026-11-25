@@ -447,6 +447,7 @@ enum LedgerEvent {
 
 model Rental {
   id           String        @id @default(cuid())
+  userId       String        @default("usr_default_demo") @map("user_id")
   studentName  String        @map("student_name")
   studentUpi   String?       @map("student_upi")
   itemId       String        @map("item_id")
@@ -461,6 +462,7 @@ model Rental {
 
   ledgerEntries LedgerEntry[]
 
+  @@index([userId])
   @@map("rentals")
 }
 
