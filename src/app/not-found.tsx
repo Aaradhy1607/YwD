@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 
 export default function NotFound() {
@@ -15,7 +13,7 @@ export default function NotFound() {
         </p>
         <div className="pt-2">
           <Link
-            href="/"
+            href="/marketplace"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-medium text-xs tracking-wide transition-colors"
           >
             Return to Exchange Point

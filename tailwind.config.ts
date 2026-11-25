@@ -33,6 +33,10 @@ const config: Config = {
           border: "#E5DEC9",
           "border-dark": "#2E3B34",
           muted: "#63736A",
+          // Royal Violet brand accent
+          violet: "#7052DF",
+          "violet-dark": "#5B3DC6",
+          "violet-light": "#F0EDFC",
         },
       },
       fontFamily: {

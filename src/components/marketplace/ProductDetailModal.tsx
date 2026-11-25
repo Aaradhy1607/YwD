@@ -240,20 +240,20 @@ export function ProductDetailModal({
           onClose={() => setUpiModalData(null)}
         />
       )}
-      <div className="fixed inset-0 z-50 overflow-y-auto bg-[#202522]/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
-      <div className="bg-[#FFFFFF] w-full max-w-5xl rounded-3xl shadow-2xl border border-[#E5DEC9] overflow-hidden flex flex-col max-h-[92vh]">
+      <div className="fixed inset-0 z-50 overflow-y-auto bg-[#202522]/75 flex items-center justify-center p-3 sm:p-6">
+      <div className="bg-[#FAF7F2] w-full max-w-5xl rounded-3xl shadow-2xl border border-[#E5DEC9] overflow-hidden flex flex-col max-h-[92vh]">
         {/* Modal Top Bar */}
         <div className="bg-[#18352D] text-[#F5F0E8] px-6 py-4 flex items-center justify-between border-b border-[#2C483F] shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-full overflow-hidden bg-[#FAF7F2] border border-white/20 shrink-0 shadow-xs">
+            <div className="w-7 h-7 rounded-full overflow-hidden bg-[#FAF7F2] border border-white/20 shrink-0">
               <img src="/images/ywd-logo.png" alt="YwD Insignia" className="w-full h-full object-cover" />
             </div>
             <div>
-              <span className="text-xs font-mono font-semibold tracking-wide text-white block">
-                {mode === "rent" ? "RENTAL SPECIFICATION // ESCROW INSPECTOR" : "RECOMMERCE ACQUISITION"}
+              <span className="text-xs font-semibold tracking-wide text-white block">
+                {mode === "rent" ? "Rental Details & Booking" : "Purchase Details"}
               </span>
-              <span className="text-[10px] font-mono text-[#789681] block">
-                VERIFIED ARCHIVE // DISPUTE-FREE
+              <span className="text-[11px] text-[#9BB5A3] block">
+                Verified campus listing • Protected deposit
               </span>
             </div>
           </div>
@@ -291,19 +291,16 @@ export function ProductDetailModal({
             {/* Left Column: Gallery & Details */}
             <div className="lg:col-span-7 space-y-6">
               {/* Primary Image View */}
-              <div className="relative h-72 sm:h-80 bg-[#FAF7F2] rounded-2xl overflow-hidden border border-[#E5DEC9]">
+              <div className="relative h-72 sm:h-96 bg-[#EAE2D5] rounded-2xl overflow-hidden border border-[#E5DEC9]">
                 <img
                   src={images[activeImageIdx] || images[0]}
                   alt={product.title}
+                  decoding="async"
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute top-3 left-3 flex gap-2">
-                  <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-[#FFFFFF] text-[#18352D] shadow-xs border border-[#E5DEC9]">
+                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#FAF7F2]/95 text-[#18352D] border border-[#E5DEC9]">
                     {product.conditionGrade || "Mint Grade"}
-                  </span>
-                  <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-[#18352D] text-[#F5F0E8] shadow-xs flex items-center gap-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5 text-[#789681]" />
-                    Escrow protected
                   </span>
                 </div>
               </div>
@@ -335,14 +332,14 @@ export function ProductDetailModal({
 
               {/* Title & Description */}
               <div>
-                <div className="flex items-center gap-1.5 text-xs text-[#789681] font-medium mb-1">
+                <div className="flex items-center gap-1.5 text-xs text-[#63736A] font-medium mb-1.5">
                   <MapPin className="w-3.5 h-3.5 text-[#C46A42]" />
                   <span>{product.campusHub || "Central Logistics Hub"}</span>
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-semibold text-[#18352D] tracking-tight leading-snug">
+                <h1 className="font-editorial text-2xl sm:text-4xl text-[#18352D] tracking-tight leading-snug">
                   {product.title}
                 </h1>
-                <p className="text-xs sm:text-sm text-[#63736A] mt-2.5 leading-relaxed whitespace-pre-line">
+                <p className="text-xs sm:text-sm text-[#63736A] mt-3 leading-relaxed whitespace-pre-line">
                   {product.description}
                 </p>
               </div>

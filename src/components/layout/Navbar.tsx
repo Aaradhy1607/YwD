@@ -67,6 +67,14 @@ export function Navbar({
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -116,13 +124,19 @@ export function Navbar({
 
   return (
     <header
-      className={`sticky top-0 z-40 backdrop-blur-xl border-b transition-colors duration-500 shadow-sm ${
+      className={`sticky top-0 z-40 border-b transition-all duration-200 ${
         cosmicMode
-          ? "bg-[#060A08]/90 border-white/10 text-white shadow-black/60"
-          : "bg-[#FFFFFF]/95 border-[#E5DEC9] text-[#18352D] shadow-[0_1px_3px_0_rgba(24,53,45,0.03)]"
+          ? "bg-[#060A08] border-white/10 text-white shadow-black/60"
+          : scrolled
+          ? "bg-[#FFFFFF] border-[#E5DEC9] text-[#18352D] shadow-sm"
+          : "bg-[#FFFFFF] border-[#E5DEC9] text-[#18352D]"
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 sm:h-[76px] flex items-center justify-between gap-4">
+      <div
+        className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4 transition-[height] duration-200 ${
+          scrolled ? "h-16" : "h-18 sm:h-[76px]"
+        }`}
+      >
         {/* ========================================================
             LEFT — BRAND
            ======================================================== */}
@@ -168,11 +182,8 @@ export function Navbar({
                 key={item.id}
                 type="button"
                 onClick={() => {
-                  if (item.id === "trust" && activeScreen === "home") {
-                    document.getElementById("scenario-calculator")?.scrollIntoView({ behavior: "smooth" });
-                  } else {
-                    setActiveScreen(item.id);
-                  }
+                  setActiveScreen(item.id);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
                 className={`relative py-2 text-[13px] font-medium tracking-normal transition-colors whitespace-nowrap focus:outline-none ${
                   isActive
@@ -197,6 +208,16 @@ export function Navbar({
               </button>
             );
           })}
+          <Link
+            href="/get-started"
+            className={`relative py-2 text-[13px] font-medium tracking-normal transition-colors whitespace-nowrap focus:outline-none ${
+              cosmicMode
+                ? "text-white/60 hover:text-white"
+                : "text-[#63736A] hover:text-[#18352D]"
+            }`}
+          >
+            Get Started
+          </Link>
 
           {/* My Rentals (visible in center on large screens when logged in) */}
           {isLoggedIn && (
@@ -555,7 +576,7 @@ export function Navbar({
             </div>
           ) : (
             <Link
-              href="/login"
+              href="/auth?tab=login"
               className="px-4 py-2 rounded-full border border-[#E5DEC9] hover:border-[#18352D] text-xs font-semibold text-[#18352D] transition-colors"
             >
               Sign in
@@ -618,6 +639,14 @@ export function Navbar({
                 </button>
               ))}
 
+              <Link
+                href="/get-started"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#18352D] hover:bg-[#FAF7F2] transition-colors"
+              >
+                Get Started
+              </Link>
+
               {onOpenGuidedDiscovery && (
                 <button
                   type="button"
@@ -652,6 +681,15 @@ export function Navbar({
 
             {/* Mobile Actions Bottom Rail */}
             <div className="pt-3 border-t border-[#E5DEC9] space-y-2">
+              {!isLoggedIn && (
+                <Link
+                  href="/auth?tab=login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full py-2.5 px-4 rounded-full border border-[#E5DEC9] text-[#18352D] text-xs font-semibold flex items-center justify-center transition-colors"
+                >
+                  Sign in
+                </Link>
+              )}
               <button
                 type="button"
                 onClick={() => {

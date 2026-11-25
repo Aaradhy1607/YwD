@@ -10,6 +10,10 @@
   --ywd-sage: #789681;
   --ywd-charcoal: #202522;
   --ywd-white: #FFFFFF;
+  --ywd-violet: #7052DF;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
 
   --background: #F5F0E8;
   --foreground: #18352D;
@@ -18,9 +22,13 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.font-editorial {
+  font-family: var(--font-display);
 }
 
 /* Custom scrollbars matching the Warm Cream & Deep Forest palette */

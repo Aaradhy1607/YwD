@@ -102,7 +102,7 @@ export function HandoverInspectionSimulator({
               How are you protected from damage disputes?
             </h2>
             <p className="text-sm sm:text-base text-neutral-400 max-w-2xl leading-relaxed">
-              Never get blamed for a scratch you didn't cause. Both parties inspect hardware together and record 4 timestamped angles before the 6-digit handshake OTP unlocks the gear.
+              Never get blamed for a scratch you didn&apos;t cause. Both parties inspect hardware together and record 4 timestamped angles before the 6-digit handshake OTP unlocks the gear.
             </p>
           </div>
 

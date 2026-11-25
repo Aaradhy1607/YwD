@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
-import { Heart, MapPin, ArrowRight, CheckCircle2, ShieldCheck, Maximize2 } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Heart, MapPin, ArrowRight } from "lucide-react";
 import { formatINR } from "@/lib/pricing";
 
 interface ProductCardProps {
   product: any;
   durationTier?: string;
+  featured?: boolean;
   isWishlisted: boolean;
   onToggleWishlist: (productId: string) => void;
   onOpenDetail: (productId: string, mode?: "rent" | "buy", duration?: string) => void;
@@ -15,12 +16,16 @@ interface ProductCardProps {
 export function ProductCard({
   product,
   durationTier = "daily",
+  featured = false,
   isWishlisted,
   onToggleWishlist,
   onOpenDetail,
 }: ProductCardProps) {
-  const [isHovered, setIsHovered] = useState(false);
   const [selectedTier, setSelectedTier] = useState(durationTier);
+
+  useEffect(() => {
+    setSelectedTier(durationTier);
+  }, [durationTier]);
 
   const handleWishlistClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -40,16 +45,15 @@ export function ProductCard({
     "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=800&q=80";
 
   const secondaryImage =
-    conditionPhotos[1] ||
     images[1] ||
-    conditionPhotos[0] ||
-    primaryImage;
+    conditionPhotos.find((url: string) => url && url !== primaryImage) ||
+    null;
 
   const getDisplayRate = (tier: string) => {
     switch (tier) {
       case "hourly":
         return {
-          rate: product.rentalPriceHourly || Math.round(product.rentalPriceDaily / 6),
+          rate: product.rentalPriceHourly || Math.round((product.rentalPriceDaily || 0) / 6),
           unit: "hr",
         };
       case "weekly":
@@ -59,12 +63,12 @@ export function ProductCard({
         };
       case "monthly":
         return {
-          rate: product.rentalPriceMonthly || Math.round(product.rentalPriceWeekly * 3.4),
+          rate: product.rentalPriceMonthly || Math.round((product.rentalPriceWeekly || 0) * 3.4),
           unit: "mo",
         };
       case "semester":
         return {
-          rate: product.rentalPriceSemester || Math.round(product.rentalPriceWeekly * 8.5),
+          rate: product.rentalPriceSemester || Math.round((product.rentalPriceWeekly || 0) * 8.5),
           unit: "sem",
         };
       case "daily":
@@ -77,206 +81,128 @@ export function ProductCard({
   };
 
   const { rate, unit } = getDisplayRate(selectedTier);
-
-  // Extract up to 3 hardware specs for Basalt-style deconstruction
-  const specs = product.specs ? Object.entries(product.specs).slice(0, 3) : [];
-  const specimenIndex = product.id
-    ? product.id.replace("prod_", "").toUpperCase().slice(0, 6)
-    : "001";
+  const statusLabel = product.conditionGrade
+    ? product.conditionGrade
+    : product.isAvailable === false
+    ? "Unavailable"
+    : "Available";
 
   return (
-    <div
+    <article
       onClick={() => onOpenDetail(product.id, "rent", selectedTier)}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className="bg-[#FFFFFF] rounded-2xl border border-[#E5DEC9] overflow-hidden flex flex-col justify-between hover:border-[#18352D] hover:shadow-xl transition-all duration-300 group cursor-pointer relative"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpenDetail(product.id, "rent", selectedTier);
+        }
+      }}
+      tabIndex={0}
+      role="button"
+      aria-label={`View ${product.title}`}
+      className={`bg-[#FAF7F2] rounded-2xl border border-[#E5DEC9] overflow-hidden hover:-translate-y-0.5 hover:border-[#18352D]/40 transition-all duration-200 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#18352D]/30 ${
+        featured
+          ? "sm:col-span-2 grid grid-cols-1 sm:grid-cols-12"
+          : "flex flex-col justify-between"
+      }`}
     >
-      {/* Camber Blueprint Parchment Grid Texture behind Card */}
-      <div className="absolute inset-0 bg-[radial-gradient(#E8E2D2_1px,transparent_1px)] [background-size:16px_16px] opacity-30 pointer-events-none" />
+      {/* Image Area */}
+      <div
+        className={`relative bg-[#EAE2D5] overflow-hidden ${
+          featured ? "sm:col-span-6 aspect-[4/3] sm:aspect-auto sm:min-h-[260px]" : "aspect-[4/3]"
+        }`}
+      >
+        <img
+          src={primaryImage}
+          alt={product.title}
+          loading="lazy"
+          decoding="async"
+          className={`w-full h-full object-cover object-center transition-all duration-500 ease-out group-hover:scale-[1.03] ${
+            secondaryImage ? "group-hover:opacity-0" : ""
+          }`}
+        />
 
-      <div className="relative z-10">
-        {/* Camber Top Specimen Banner */}
-        <div className="px-4 py-3 bg-[#FAF7F2] border-b border-[#E5DEC9] flex items-center justify-between text-[11px] font-mono">
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#C46A42]" />
-            <span className="text-[#18352D] font-bold">
-              SPEC // {specimenIndex}
-            </span>
-          </div>
-          <span className="text-[#789681] font-semibold uppercase tracking-wider text-[10px]">
-            {product.categorySlug || "Fleet"} • {product.conditionGrade || "Mint"}
-          </span>
-        </div>
-
-        {/* Basalt Deconstructed Hardware Canvas */}
-        <div className="relative aspect-[16/11] bg-[#11231E] overflow-hidden">
-          {/* Subtle millimeter coordinate grid */}
-          <div className="absolute inset-0 bg-[radial-gradient(#2C483F_1px,transparent_1px)] [background-size:20px_20px] opacity-40 pointer-events-none" />
-
-          {/* Primary View */}
+        {secondaryImage && (
           <img
-            src={primaryImage}
-            alt={product.title}
-            className={`w-full h-full object-cover object-center transition-all duration-700 ease-out ${
-              isHovered && secondaryImage !== primaryImage
-                ? "opacity-0 scale-105"
-                : "opacity-100 scale-100"
+            src={secondaryImage}
+            alt={`${product.title} alternate angle`}
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 w-full h-full object-cover object-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-out"
+          />
+        )}
+
+        {/* Single Subtle Top-Left Status Pill */}
+        <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-[#FAF7F2]/95 text-[#18352D] border border-[#E5DEC9] text-[11px] font-medium z-10">
+          {statusLabel}
+        </span>
+
+        {/* Wishlist Heart Top-Right */}
+        <button
+          type="button"
+          onClick={handleWishlistClick}
+          aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-[#FAF7F2]/95 hover:bg-white border border-[#E5DEC9] flex items-center justify-center text-[#18352D] transition-transform active:scale-90 z-10"
+        >
+          <Heart
+            className={`w-4 h-4 transition-colors ${
+              isWishlisted
+                ? "fill-[#C46A42] text-[#C46A42]"
+                : "text-[#63736A] hover:text-[#C46A42]"
             }`}
           />
+        </button>
+      </div>
 
-          {/* Secondary Camber/Basalt Angle (Crossfades on Hover) */}
-          {secondaryImage !== primaryImage && (
-            <img
-              src={secondaryImage}
-              alt={`${product.title} Internal Angle`}
-              className={`absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 ease-out ${
-                isHovered ? "opacity-100 scale-105" : "opacity-0 scale-95"
-              }`}
-            />
+      {/* Content + Pricing Wrapper */}
+      <div className={featured ? "sm:col-span-6 flex flex-col justify-between" : "flex flex-col flex-1 justify-between"}>
+        <div className="p-5 space-y-2.5">
+          {featured && (
+            <span className="inline-block text-[10px] font-mono uppercase tracking-wider text-[#C46A42]">
+              Featured pick
+            </span>
+          )}
+          {product.campusHub && (
+            <div className="flex items-center gap-1.5 text-xs text-[#63736A]">
+              <MapPin className="w-3.5 h-3.5 text-[#789681] shrink-0" />
+              <span className="truncate">{product.campusHub}</span>
+            </div>
           )}
 
-          {/* Corner Registration Crosshairs (Basalt Style) */}
-          <div className="absolute top-2.5 left-2.5 text-white/35 font-mono text-[9px] pointer-events-none select-none">
-            +
-          </div>
-          <div className="absolute top-2.5 right-2.5 text-white/35 font-mono text-[9px] pointer-events-none select-none">
-            +
-          </div>
-          <div className="absolute bottom-2.5 left-2.5 text-white/35 font-mono text-[9px] pointer-events-none select-none">
-            +
-          </div>
-          <div className="absolute bottom-2.5 right-2.5 text-white/35 font-mono text-[9px] pointer-events-none select-none">
-            +
-          </div>
-
-          {/* Exploded Numbered Pins (Camber "Eleven Pieces" aesthetic on hover) */}
-          <div
-            className={`absolute inset-0 pointer-events-none transition-opacity duration-300 ${
-              isHovered ? "opacity-100" : "opacity-0"
+          <h3
+            className={`font-semibold text-[#18352D] group-hover:text-[#C46A42] transition-colors leading-snug ${
+              featured ? "text-lg sm:text-xl line-clamp-2" : "text-base line-clamp-1"
             }`}
           >
-            <div className="absolute top-1/4 left-1/4 px-1.5 py-0.5 rounded-full bg-[#18352D]/90 border border-white/30 text-white text-[9px] font-mono shadow-sm">
-              01 // OPTICS
-            </div>
-            <div className="absolute bottom-1/3 right-1/4 px-1.5 py-0.5 rounded-full bg-[#18352D]/90 border border-white/30 text-white text-[9px] font-mono shadow-sm">
-              02 // SILICON
-            </div>
-          </div>
-
-          {/* Wishlist Button */}
-          <button
-            type="button"
-            onClick={handleWishlistClick}
-            aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-            title="Wishlist"
-            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 hover:bg-white flex items-center justify-center text-[#18352D] shadow-sm transition-all z-20"
-          >
-            <Heart
-              className={`w-4 h-4 transition-colors ${
-                isWishlisted
-                  ? "fill-[#C46A42] text-[#C46A42]"
-                  : "text-[#63736A] hover:text-[#C46A42]"
-              }`}
-            />
-          </button>
-
-          {/* Bottom Telemetry HUD Bar */}
-          <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/85 via-black/40 to-transparent flex items-center justify-between text-[10px] font-mono text-white">
-            <span className="flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-[#789681]" />
-              <span>100% ESCROW BOND</span>
-            </span>
-
-            {isHovered ? (
-              <span className="text-[#C46A42] font-semibold flex items-center gap-1">
-                <Maximize2 className="w-3 h-3" />
-                <span>INSPECT DECONSTRUCTION</span>
-              </span>
-            ) : product.isPurchasable && Boolean(product.buyPrice) ? (
-              <span className="text-[#FAF7F2] bg-white/15 px-2 py-0.5 rounded text-[9px]">
-                Buy: {formatINR(product.buyPrice)}
-              </span>
-            ) : null}
-          </div>
-        </div>
-
-        {/* Camber Specimen Metadata Body */}
-        <div className="p-4 sm:p-5 space-y-3">
-          {/* Handover Station */}
-          <div className="flex items-center gap-1.5 text-xs text-[#63736A] font-mono">
-            <MapPin className="w-3.5 h-3.5 text-[#C46A42] shrink-0" />
-            <span className="truncate">{product.campusHub || "Central Locker Hub A"}</span>
-          </div>
-
-          {/* Title */}
-          <h3 className="font-semibold text-base text-[#18352D] group-hover:text-[#C46A42] transition-colors line-clamp-1 leading-snug">
             {product.title}
           </h3>
 
-          {/* Basalt Material & Hardware Specification Pills */}
-          {specs.length > 0 && (
-            <div className="grid grid-cols-2 gap-1.5 pt-1">
-              {specs.map(([label, val]) => (
-                <div
-                  key={label}
-                  className="p-1.5 rounded-lg bg-[#FAF7F2] border border-[#E5DEC9] text-[10px] font-mono"
-                >
-                  <span className="text-[#63736A] block text-[9px] uppercase">{label}</span>
-                  <span className="font-semibold text-[#18352D] truncate block mt-0.5">
-                    {String(val)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Concise description */}
-          <p className="text-xs text-[#63736A] line-clamp-2 leading-relaxed">
+          <p className={`text-xs text-[#63736A] leading-relaxed ${featured ? "line-clamp-3" : "line-clamp-2"}`}>
             {product.description}
           </p>
         </div>
-      </div>
 
-      {/* Camber Interactive Duration & Escrow Pricing Terminal */}
-      <div className="p-4 pt-3 border-t border-[#E5DEC9] bg-[#FAF7F2] relative z-10 space-y-3">
-        {/* Duration Tier Toggles */}
-        <div className="grid grid-cols-4 gap-1 p-0.5 rounded-lg bg-white border border-[#E5DEC9] text-[10px] font-mono">
-          {[
-            { id: "daily", label: "Day" },
-            { id: "weekly", label: "Wk" },
-            { id: "monthly", label: "Mo" },
-            { id: "semester", label: "Sem" },
-          ].map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedTier(t.id);
-              }}
-              className={`py-1 rounded text-center transition-all ${
-                selectedTier === t.id
-                  ? "bg-[#18352D] text-white font-bold shadow-xs"
-                  : "text-[#63736A] hover:text-[#18352D]"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Pricing Output & Immediate Reserve Trigger */}
-        <div className="flex items-center justify-between gap-3 pt-0.5">
-          <div>
-            <div className="flex items-baseline gap-1">
-              <span className="font-semibold text-lg text-[#18352D] font-mono tabular-nums">
-                {formatINR(rate)}
-              </span>
-              <span className="text-xs text-[#63736A]">/{unit}</span>
+        {/* Pricing Hierarchy & Quick Action */}
+        <div className="px-5 pb-5 pt-3 border-t border-[#E5DEC9] space-y-3">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <div className="flex items-baseline gap-1">
+                <span className="font-semibold text-lg text-[#18352D] font-mono tabular-nums">
+                  {formatINR(rate)}
+                </span>
+                <span className="text-xs text-[#63736A]">/{unit}</span>
+              </div>
             </div>
-            <span className="text-[10px] text-[#789681] block font-mono font-medium">
-              Deposit: {formatINR(product.deposit)} (Refundable)
-            </span>
+
+            <div className="text-right text-[11px] leading-tight space-y-0.5">
+              <span className="block text-[#63736A] font-mono tabular-nums">
+                Deposit {formatINR(product.deposit)}
+              </span>
+              {product.isPurchasable && Boolean(product.buyPrice) && (
+                <span className="block text-[#18352D] font-medium font-mono tabular-nums">
+                  Buy {formatINR(product.buyPrice)}
+                </span>
+              )}
+            </div>
           </div>
 
           <button
@@ -285,13 +211,17 @@ export function ProductCard({
               e.stopPropagation();
               onOpenDetail(product.id, "rent", selectedTier);
             }}
-            className="px-4 py-2 rounded-xl bg-[#18352D] hover:bg-[#C46A42] text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
+            className={`w-full py-2.5 px-4 rounded-xl bg-[#18352D] hover:bg-[#C46A42] text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-200 ${
+              featured
+                ? ""
+                : "sm:opacity-0 sm:translate-y-1 sm:group-hover:opacity-100 sm:group-hover:translate-y-0 sm:focus:opacity-100 sm:focus:translate-y-0"
+            }`}
           >
-            <span>Reserve</span>
+            <span>Quick view &amp; reserve</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
-    </div>
+    </article>
   );
 }

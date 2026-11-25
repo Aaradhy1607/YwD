@@ -7,9 +7,33 @@ export const registerSchema = z.object({
   campusHub: z.string().optional(),
 });
 
+export const registerFormSchema = registerSchema.extend({
+  confirmPassword: z.string().min(8, "Password confirmation is required"),
+  termsAccepted: z.literal(true, {
+    errorMap: () => ({ message: "You must accept the Terms of Service and Privacy Policy" }),
+  }),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
+
 export const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Invalid email address"),
+});
+
+export const resetPasswordSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  token: z.string().min(4, "Reset code or token is required"),
+  newPassword: z.string().min(8, "New password must be at least 8 characters").max(100),
+  confirmNewPassword: z.string().min(8, "Confirm password is required"),
+}).refine((data) => data.newPassword === data.confirmNewPassword, {
+  message: "Passwords do not match",
+  path: ["confirmNewPassword"],
 });
 
 export const createProductSchema = z.object({

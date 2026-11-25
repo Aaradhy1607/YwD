@@ -29,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen flex flex-col bg-[#F5F0E8] text-[#18352D] antialiased selection:bg-[#18352D] selection:text-[#F5F0E8]">
         <SmoothScrollProvider>{children}</SmoothScrollProvider>
       </body>
