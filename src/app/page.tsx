@@ -1,15 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "framer-motion";
+import { motion, AnimatePresence, useScroll } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { HeroSection } from "@/components/marketplace/HeroSection";
-import { OrbitSphereHero } from "@/components/marketplace/OrbitSphereHero";
-import { InteractiveCursor } from "@/components/motion/InteractiveCursor";
-import { ImmersiveCanvasWrapper } from "@/components/canvas/ImmersiveCanvasWrapper";
-import { useScrollVelocity } from "@/hooks/useScrollVelocity";
-import { useSectionInView } from "@/hooks/useSectionInView";
 import { CategoryGrid } from "@/components/marketplace/CategoryGrid";
 import { CategoriesView } from "@/components/marketplace/CategoriesView";
 import { ProductGrid } from "@/components/marketplace/ProductGrid";
@@ -24,53 +19,12 @@ import { ReturnInspectionModal } from "@/components/inspection/ReturnInspectionM
 import { TrustSection } from "@/components/trust/TrustSection";
 import { AccessProtocol } from "@/components/trust/AccessProtocol";
 import { CuratedSpotlight } from "@/components/marketplace/CuratedSpotlight";
-import { SpecimenDeck } from "@/components/marketplace/SpecimenDeck";
-import { CampusTelemetryDashboard } from "@/components/marketplace/CampusTelemetryDashboard";
-import { TechnicalAnatomyInspector } from "@/components/marketplace/TechnicalAnatomyInspector";
 import { GuidedDiscoveryModal } from "@/components/marketplace/GuidedDiscoveryModal";
-import { ScenarioCostCalculator } from "@/components/how/ScenarioCostCalculator";
-import { HandoverInspectionSimulator } from "@/components/how/HandoverInspectionSimulator";
-import { HardwareBenchmarkExplorer } from "@/components/how/HardwareBenchmarkExplorer";
-import { CapitalFlowLedger } from "@/components/how/CapitalFlowLedger";
-import { CampusProximityRadar } from "@/components/how/CampusProximityRadar";
 import { SEED_CATEGORIES, SEED_PRODUCTS } from "@/data/seedData";
 import { CheckCircle2, X } from "lucide-react";
 
 export default function YwDApp() {
   const { scrollYProgress } = useScroll();
-  const { velocity } = useScrollVelocity();
-
-  const sectionIds = useMemo(
-    () => [
-      "hero-section",
-      "scenario-calculator",
-      "specimen-deck",
-      "category-grid",
-      "technical-anatomy",
-      "benchmark-explorer",
-      "campus-telemetry",
-      "handover-simulator",
-      "capital-ledger",
-      "campus-radar",
-      "curated-spotlight",
-      "product-inventory",
-      "access-protocol",
-      "trust-section",
-    ],
-    []
-  );
-
-  const { activeSectionIndex } = useSectionInView(sectionIds);
-  const [scrollProgressVal, setScrollProgressVal] = useState(0);
-  const [scrollVelocityVal, setScrollVelocityVal] = useState(0);
-
-  useMotionValueEvent(scrollYProgress, "change", (latest) => {
-    setScrollProgressVal(latest);
-  });
-
-  useMotionValueEvent(velocity, "change", (latest) => {
-    setScrollVelocityVal(latest);
-  });
 
   // Navigation screen
   const [activeScreen, setActiveScreen] = useState<string>("home");
@@ -125,9 +79,8 @@ export default function YwDApp() {
   const [returnBookingId, setReturnBookingId] = useState<string | null>(null);
   const [isGuidedDiscoveryOpen, setIsGuidedDiscoveryOpen] = useState(false);
 
-  // Experience & Theme Dimension States (Orbit Sphere & Internet Alchemist cosmic mode)
-  const [cosmicMode, setCosmicMode] = useState<boolean>(true);
-  const [heroView, setHeroView] = useState<"orbit" | "classic">("orbit");
+  // Clean studio theme
+  const cosmicMode = false;
 
   // Toasts
   const [toast, setToast] = useState<{ title: string; subtitle?: string } | null>(null);
@@ -344,30 +297,11 @@ export default function YwDApp() {
   const activeCategoryObj = categories.find((c) => c.slug === selectedCategory);
 
   return (
-    <div
-      className={`min-h-screen flex flex-col transition-colors duration-1000 ${
-        cosmicMode
-          ? "bg-[#060A08] text-[#F3F4F6] selection:bg-[#10B981] selection:text-[#060A08]"
-          : "bg-[#F5F0E8] text-[#18352D] selection:bg-[#18352D] selection:text-[#F5F0E8]"
-      }`}
-    >
-      {/* Bespoke Magnetic Interactive Cursor & Subtle Celestial Dust */}
-      <InteractiveCursor mode={cosmicMode ? "cosmic" : "studio"} />
-
-      {/* 3D Immersive Full-Screen Persistent Canvas & Scene Orchestration */}
-      <ImmersiveCanvasWrapper
-        scrollProgress={scrollProgressVal}
-        scrollVelocity={scrollVelocityVal}
-        activeSectionIndex={activeSectionIndex}
-        cosmicMode={cosmicMode}
-      />
-
+    <div className="min-h-screen flex flex-col bg-[#F5F0E8] text-[#18352D] selection:bg-[#18352D] selection:text-[#F5F0E8]">
       {/* Sleek Top Scroll Progress Bar */}
       <motion.div
         style={{ scaleX: scrollYProgress }}
-        className={`fixed top-0 left-0 right-0 h-[2.5px] z-50 origin-left ${
-          cosmicMode ? "bg-[#10B981]" : "bg-[#C46A42]"
-        }`}
+        className="fixed top-0 left-0 right-0 h-[2.5px] z-50 origin-left bg-[#C46A42]"
       />
 
       {/* Toast popup */}
@@ -430,77 +364,32 @@ export default function YwDApp() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              {/* Master 3D Orbit Sphere Hero & Classic Mode Switcher */}
+              {/* Clean Editorial Hero */}
               <div id="hero-section">
-                {heroView === "orbit" ? (
-                  <OrbitSphereHero
-                    categories={categories}
-                    heroProducts={allProducts.length > 0 ? allProducts : SEED_PRODUCTS}
-                    selectedCategory={selectedCategory}
-                    setSelectedCategory={(cat) => {
-                      setSelectedCategory(cat);
-                      setSelectedSubcategory("all");
-                      setActiveScreen("explore");
-                    }}
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                    transactionFilter={transactionFilter}
-                    setTransactionFilter={setTransactionFilter}
-                    preferredDuration={preferredDuration}
-                    setPreferredDuration={setPreferredDuration}
-                    onExplore={() => setActiveScreen("explore")}
-                    onOpenProductDetail={handleOpenDetail}
-                    onOpenListProduct={() => setIsListProductOpen(true)}
-                    onOpenHubModal={() => setIsHubModalOpen(true)}
-                    onOpenGuidedDiscovery={() => setIsGuidedDiscoveryOpen(true)}
-                    cosmicMode={cosmicMode}
-                    onToggleCosmicMode={() => setCosmicMode(!cosmicMode)}
-                    heroView={heroView}
-                    onToggleHeroView={setHeroView}
-                  />
-                ) : (
-                  <HeroSection
-                    categories={categories}
-                    heroProducts={allProducts.length > 0 ? allProducts : SEED_PRODUCTS}
-                    selectedCategory={selectedCategory}
-                    setSelectedCategory={(cat) => {
-                      setSelectedCategory(cat);
-                      setSelectedSubcategory("all");
-                      setActiveScreen("explore");
-                    }}
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                    transactionFilter={transactionFilter}
-                    setTransactionFilter={setTransactionFilter}
-                    preferredDuration={preferredDuration}
-                    setPreferredDuration={setPreferredDuration}
-                    onExplore={() => setActiveScreen("explore")}
-                    onOpenProductDetail={handleOpenDetail}
-                    onOpenListProduct={() => setIsListProductOpen(true)}
-                    onOpenHubModal={() => setIsHubModalOpen(true)}
-                    onOpenGuidedDiscovery={() => setIsGuidedDiscoveryOpen(true)}
-                  />
-                )}
-              </div>
-
-              {/* HOW FACTOR 01: Project Scenario Feasibility & Upfront Capital Preserved Calculator */}
-              <div id="scenario-calculator">
-                <ScenarioCostCalculator
-                  cosmicMode={cosmicMode}
-                  onOpenProductDetail={handleOpenDetail}
-                />
-              </div>
-
-              {/* Tilted Archival Card Deck: 4 Field-Tested Disciplines */}
-              <div id="specimen-deck">
-                <SpecimenDeck
-                  onOpenProductDetail={handleOpenDetail}
+                <HeroSection
+                  categories={categories}
+                  heroProducts={allProducts.length > 0 ? allProducts : SEED_PRODUCTS}
+                  selectedCategory={selectedCategory}
+                  setSelectedCategory={(cat) => {
+                    setSelectedCategory(cat);
+                    setSelectedSubcategory("all");
+                    setActiveScreen("explore");
+                  }}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  transactionFilter={transactionFilter}
+                  setTransactionFilter={setTransactionFilter}
+                  preferredDuration={preferredDuration}
+                  setPreferredDuration={setPreferredDuration}
                   onExplore={() => setActiveScreen("explore")}
-                  cosmicMode={cosmicMode}
+                  onOpenProductDetail={handleOpenDetail}
+                  onOpenListProduct={() => setIsListProductOpen(true)}
+                  onOpenHubModal={() => setIsHubModalOpen(true)}
+                  onOpenGuidedDiscovery={() => setIsGuidedDiscoveryOpen(true)}
                 />
               </div>
 
-              {/* Asymmetric Equipment Architecture */}
+              {/* Equipment Categories */}
               <div id="category-grid">
                 <CategoryGrid
                   categories={categories}
@@ -511,54 +400,6 @@ export default function YwDApp() {
                     setActiveScreen("explore");
                   }}
                   cosmicMode={cosmicMode}
-                />
-              </div>
-
-              {/* Technical Anatomy: Blueprint Hardware Exploded Inspector with Live 3D Stack */}
-              <div id="technical-anatomy">
-                <TechnicalAnatomyInspector
-                  onOpenProductDetail={handleOpenDetail}
-                />
-              </div>
-
-              {/* HOW FACTOR 03: Real-World Assignment Benchmark Explorer */}
-              <div id="benchmark-explorer">
-                <HardwareBenchmarkExplorer cosmicMode={cosmicMode} />
-              </div>
-
-              {/* Developer Infrastructure & Campus Telemetry */}
-              <div id="campus-telemetry">
-                <CampusTelemetryDashboard
-                  cosmicMode={cosmicMode}
-                  onExplore={() => setActiveScreen("explore")}
-                  onOpenHubModal={() => setIsHubModalOpen(true)}
-                />
-              </div>
-
-              {/* HOW FACTOR 02: 15-Second Handover & 4-Angle Photo Inspection Simulator */}
-              <div id="handover-simulator">
-                <HandoverInspectionSimulator cosmicMode={cosmicMode} />
-              </div>
-
-              {/* HOW FACTOR 04: The Transparent Capital Flow & Instant UPI Refund Ledger */}
-              <div id="capital-ledger">
-                <CapitalFlowLedger cosmicMode={cosmicMode} />
-              </div>
-
-              {/* HOW FACTOR 05: Campus Hub Proximity & Live Availability Radar */}
-              <div id="campus-radar">
-                <CampusProximityRadar
-                  cosmicMode={cosmicMode}
-                  onOpenHubModal={() => setIsHubModalOpen(true)}
-                  onExplore={() => setActiveScreen("explore")}
-                />
-              </div>
-
-              {/* Editorial Spotlight: Economics of Access & Flagship Feature */}
-              <div id="curated-spotlight">
-                <CuratedSpotlight
-                  onOpenProductDetail={handleOpenDetail}
-                  onExplore={() => setActiveScreen("explore")}
                 />
               </div>
 
@@ -584,6 +425,14 @@ export default function YwDApp() {
                       ? `${activeCategoryObj?.name || "Category"} Listings`
                       : "Curated Equipment Inventory"
                   }
+                />
+              </div>
+
+              {/* Editorial Spotlight: Economics of Access & Flagship Feature */}
+              <div id="curated-spotlight">
+                <CuratedSpotlight
+                  onOpenProductDetail={handleOpenDetail}
+                  onExplore={() => setActiveScreen("explore")}
                 />
               </div>
 
@@ -616,6 +465,7 @@ export default function YwDApp() {
                   setSelectedCategory(slug);
                   setSelectedSubcategory("all");
                 }}
+                cosmicMode={cosmicMode}
               />
               <ProductGrid
                 products={filteredProducts}

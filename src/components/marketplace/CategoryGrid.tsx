@@ -32,7 +32,7 @@ export function CategoryGrid({
   categories,
   selectedCategory,
   onSelectCategory,
-  cosmicMode = true,
+  cosmicMode = false,
 }: CategoryGridProps) {
   const getIcon = (iconName: string) => {
     switch (iconName) {
@@ -64,7 +64,7 @@ export function CategoryGrid({
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 pb-6 border-b border-current/10">
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-mono tracking-[0.2em] uppercase backdrop-blur-md transition-colors bg-white/5 border-current/15">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className={`w-1.5 h-1.5 rounded-full ${cosmicMode ? "bg-emerald-400 animate-pulse" : "bg-[#C46A42]"}`} />
               <span>CURATED EQUIPMENT ARCHITECTURE</span>
             </div>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight">
@@ -85,7 +85,7 @@ export function CategoryGrid({
             }`}
           >
             <span>View complete catalog</span>
-            <ArrowRight className="w-4 h-4 text-emerald-400" />
+            <ArrowRight className={`w-4 h-4 ${cosmicMode ? "text-emerald-400" : "text-[#C46A42]"}`} />
           </button>
         </div>
 
@@ -165,13 +165,13 @@ export function CategoryGrid({
                       </span>
                     ))}
                     {cat.subcategories?.length > 3 && (
-                      <span className="text-[11px] font-mono text-emerald-400 px-1">
+                      <span className={`text-[11px] font-mono px-1 ${cosmicMode ? "text-emerald-400" : "text-[#C46A42]"}`}>
                         +{cat.subcategories.length - 3} more
                       </span>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-1 text-xs font-semibold text-emerald-400 group-hover:translate-x-1 transition-transform">
+                  <div className={`flex items-center gap-1 text-xs font-semibold group-hover:translate-x-1 transition-transform ${cosmicMode ? "text-emerald-400" : "text-[#18352D]"}`}>
                     <span>Browse</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </div>
