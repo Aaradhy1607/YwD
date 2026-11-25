@@ -895,7 +895,7 @@ export function OrbitSphereHero({
           >
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="opacity-60">{currentSpecimen.specimenTag}</span>
-            <span className="opacity-30">//</span>
+            <span className="opacity-30">{"//"}</span>
             <span className="font-semibold truncate max-w-[120px] sm:max-w-[200px]">
               <ScrambleText text={currentSpecimen.title} trigger={currentSpecimen.id} duration={180} />
             </span>
@@ -1009,7 +1009,7 @@ export function OrbitSphereHero({
                     duration={200}
                     className="font-mono text-xs font-bold text-emerald-400 tracking-widest"
                   />
-                  <span className="opacity-30">//</span>
+                  <span className="opacity-30">{"//"}</span>
                   <ScrambleText
                     text={currentSpecimen.discipline}
                     trigger={`${currentSpecimen.id}-${focalAngle}`}

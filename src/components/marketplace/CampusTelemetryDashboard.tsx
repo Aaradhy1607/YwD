@@ -144,9 +144,9 @@ export function CampusTelemetryDashboard({
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
                 <span className="text-emerald-400 font-bold">ESCROW VAULT ACTIVE</span>
               </div>
-              <span className="opacity-30">//</span>
+              <span className="opacity-30">{"//"}</span>
               <span className="opacity-80 shrink-0">UPI AUTO-SETTLEMENT ON VERIFIED RETURN</span>
-              <span className="opacity-30">//</span>
+              <span className="opacity-30">{"//"}</span>
               <span className="opacity-80 shrink-0 text-emerald-400">DUAL-OTP PROTOCOL ARMED</span>
             </div>
 

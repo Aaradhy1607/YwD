@@ -206,7 +206,7 @@ export function HeroSection({
               <img src="/images/ywd-logo.png" alt="YwD Insignia" className="w-full h-full object-cover" />
             </div>
             <span className="font-semibold text-white">YwD CAMPUS INFRASTRUCTURE</span>
-            <span className="text-white/30">//</span>
+            <span className="text-white/30">{"//"}</span>
             <span>VERIFIED HARDWARE VAULT</span>
             <span className="text-white/30">•</span>
             <button

@@ -176,7 +176,7 @@ export function HardwareBenchmarkExplorer({
               <div className="flex justify-between text-xs font-mono">
                 <span className="text-emerald-400 font-semibold flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  YwD Fleet // MacBook Pro 14" M3 Max (36GB Unified)
+                  YwD Fleet // MacBook Pro 14&quot; M3 Max (36GB Unified)
                 </span>
                 <span className="text-emerald-300 font-bold">
                   {activeBenchmark.ywdScore} {activeBenchmark.unit}
