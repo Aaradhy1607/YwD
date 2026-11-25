@@ -6,6 +6,8 @@ import { ProductCard } from "./ProductCard";
 
 interface ProductGridProps {
   products: any[];
+  loading?: boolean;
+  embedded?: boolean;
   preferredDuration: string;
   setPreferredDuration?: (d: string) => void;
   sortBy: string;
@@ -19,6 +21,8 @@ interface ProductGridProps {
 
 export function ProductGrid({
   products,
+  loading = false,
+  embedded = false,
   preferredDuration = "daily",
   setPreferredDuration,
   sortBy,
@@ -36,28 +40,35 @@ export function ProductGrid({
     { id: "semester", label: "Semester" },
   ];
 
+  const containerClass = embedded
+    ? "w-full"
+    : "py-12 sm:py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8";
+
+  const gridColsClass = embedded
+    ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6"
+    : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6";
+
   return (
-    <section className="py-16 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className={containerClass}>
       {/* Header with Title & Filter Controls */}
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10 pb-6 border-b border-[#E5DEC9]">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8 pb-6 border-b border-[#E5DEC9]">
         <div>
           <div className="flex items-center gap-2.5 mb-1.5">
-            <h2 className="font-semibold text-3xl sm:text-4xl text-[#18352D] tracking-tight">
+            <h2 className="font-semibold text-2xl sm:text-3xl text-[#18352D] tracking-tight">
               {activeCategoryName}
             </h2>
-            <span className="px-2.5 py-0.5 rounded-md text-xs font-mono font-medium bg-[#18352D]/10 text-[#18352D] border border-[#18352D]/15">
-              {products.length} {products.length === 1 ? "item" : "items"}
+            <span className="px-2.5 py-0.5 rounded-md text-xs font-mono font-medium bg-[#FAF7F2] text-[#18352D] border border-[#E5DEC9]">
+              {loading ? "Loading..." : `${products.length} ${products.length === 1 ? "item" : "items"}`}
             </span>
           </div>
           <p className="text-sm text-[#63736A] max-w-2xl leading-relaxed">
-            Every item is verified with 4-angle condition documentation, insured through automated escrow deposits, and ready for pickup at campus smart hubs.
+            Every item is verified with 4-angle condition documentation, protected deposit handling, and pickup at designated campus hubs.
           </p>
         </div>
 
         {/* Controls: Duration Tiers & Sort */}
         <div className="flex flex-wrap items-center gap-3">
-          {/* Rate Duration Switcher */}
-          {setPreferredDuration && (
+          {!embedded && setPreferredDuration && (
             <div className="flex items-center gap-1 bg-[#FAF7F2] p-1 rounded-xl border border-[#E5DEC9]">
               {durationOptions.map((opt) => (
                 <button
@@ -77,7 +88,7 @@ export function ProductGrid({
           )}
 
           {/* Sort Selector */}
-          <div className="flex items-center gap-2 bg-[#FFFFFF] px-3 py-1.5 rounded-xl border border-[#E5DEC9] text-xs font-medium shadow-xs">
+          <div className="flex items-center gap-2 bg-[#FAF7F2] px-3 py-2 rounded-xl border border-[#E5DEC9] text-xs font-medium">
             <ArrowUpDown className="w-3.5 h-3.5 text-[#C46A42]" />
             <span className="text-[#63736A]">Sort:</span>
             <select
@@ -96,29 +107,49 @@ export function ProductGrid({
         </div>
       </div>
 
-      {/* Grid or Empty State */}
-      {products.length === 0 ? (
-        <div className="bg-[#FFFFFF] rounded-2xl border border-[#E5DEC9] p-12 text-center max-w-md mx-auto my-12 shadow-xs">
-          <div className="w-12 h-12 rounded-xl bg-[#FAF7F2] text-[#18352D] flex items-center justify-center mx-auto mb-3 border border-[#E5DEC9]">
+      {/* Skeleton Loaders / Empty State / Product Grid */}
+      {loading ? (
+        <div className={gridColsClass} aria-busy="true" aria-label="Loading marketplace listings">
+          {Array.from({ length: 8 }).map((_, idx) => (
+            <div
+              key={idx}
+              className="bg-[#FAF7F2] rounded-2xl border border-[#E5DEC9] overflow-hidden animate-pulse"
+            >
+              <div className="aspect-[4/3] bg-[#EAE2D5]" />
+              <div className="p-5 space-y-3">
+                <div className="h-3 w-2/5 rounded bg-[#EAE2D5]" />
+                <div className="h-4 w-4/5 rounded bg-[#EAE2D5]" />
+                <div className="h-3 w-full rounded bg-[#EAE2D5]" />
+                <div className="pt-3 border-t border-[#E5DEC9] flex items-center justify-between">
+                  <div className="h-5 w-20 rounded bg-[#EAE2D5]" />
+                  <div className="h-4 w-24 rounded bg-[#EAE2D5]" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : products.length === 0 ? (
+        <div className="bg-[#FAF7F2] rounded-2xl border border-[#E5DEC9] p-12 text-center max-w-md mx-auto my-10">
+          <div className="w-12 h-12 rounded-xl bg-[#F5F0E8] text-[#18352D] flex items-center justify-center mx-auto mb-3 border border-[#E5DEC9]">
             <Package className="w-6 h-6" />
           </div>
           <h3 className="font-semibold text-lg text-[#18352D]">
             No verified listings match
           </h3>
           <p className="text-xs sm:text-sm text-[#63736A] mt-1.5 leading-relaxed">
-            Try adjusting your category selection, keyword query, or transaction filters to discover more items in the marketplace.
+            Try adjusting your category selection, keyword query, or filter criteria to discover more items in the marketplace.
           </p>
           <button
             type="button"
             onClick={onResetFilters}
-            className="mt-5 px-5 py-2 rounded-xl bg-[#18352D] text-white text-xs font-medium hover:bg-[#234C40] transition-colors shadow-xs inline-flex items-center gap-2"
+            className="mt-5 px-5 py-2.5 rounded-xl bg-[#18352D] text-white text-xs font-medium hover:bg-[#234C40] transition-colors inline-flex items-center gap-2"
           >
             <RefreshCcw className="w-3.5 h-3.5 text-[#C46A42]" />
             <span>Reset all filters</span>
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className={gridColsClass}>
           {products.map((product) => (
             <ProductCard
               key={product.id}

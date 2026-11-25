@@ -116,10 +116,10 @@ export function Navbar({
 
   return (
     <header
-      className={`sticky top-0 z-40 backdrop-blur-xl border-b transition-colors duration-500 shadow-sm ${
+      className={`sticky top-0 z-40 border-b transition-colors duration-300 shadow-sm ${
         cosmicMode
-          ? "bg-[#060A08]/90 border-white/10 text-white shadow-black/60"
-          : "bg-[#FFFFFF]/95 border-[#E5DEC9] text-[#18352D] shadow-[0_1px_3px_0_rgba(24,53,45,0.03)]"
+          ? "bg-[#060A08] border-white/10 text-white shadow-black/60"
+          : "bg-[#FFFFFF] border-[#E5DEC9] text-[#18352D] shadow-[0_1px_3px_0_rgba(24,53,45,0.03)]"
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 sm:h-[76px] flex items-center justify-between gap-4">

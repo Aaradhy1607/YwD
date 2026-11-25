@@ -1,14 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { motion, AnimatePresence, useScroll } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { HeroSection } from "@/components/marketplace/HeroSection";
 import { CategoryGrid } from "@/components/marketplace/CategoryGrid";
 import { CategoriesView } from "@/components/marketplace/CategoriesView";
 import { ProductGrid } from "@/components/marketplace/ProductGrid";
-import { JourneySection } from "@/components/marketplace/JourneySection";
 import { ProductDetailModal } from "@/components/marketplace/ProductDetailModal";
 import { ListProductModal } from "@/components/marketplace/ListProductModal";
 import { UserDashboard } from "@/components/dashboard/UserDashboard";
@@ -19,13 +18,12 @@ import { ReturnInspectionModal } from "@/components/inspection/ReturnInspectionM
 import { TrustSection } from "@/components/trust/TrustSection";
 import { AccessProtocol } from "@/components/trust/AccessProtocol";
 import { CuratedSpotlight } from "@/components/marketplace/CuratedSpotlight";
+import { ExploreCatalog } from "@/components/marketplace/ExploreCatalog";
 import { GuidedDiscoveryModal } from "@/components/marketplace/GuidedDiscoveryModal";
 import { SEED_CATEGORIES, SEED_PRODUCTS } from "@/data/seedData";
 import { CheckCircle2, X } from "lucide-react";
 
 export default function YwDApp() {
-  const { scrollYProgress } = useScroll();
-
   // Navigation screen
   const [activeScreen, setActiveScreen] = useState<string>("home");
 
@@ -41,6 +39,10 @@ export default function YwDApp() {
   const [transactionFilter, setTransactionFilter] = useState<"all" | "rent" | "buy">("all");
   const [preferredDuration, setPreferredDuration] = useState<string>("daily");
   const [sortBy, setSortBy] = useState<string>("featured");
+  const [maxDailyPrice, setMaxDailyPrice] = useState<number | null>(null);
+  const [selectedHubFilter, setSelectedHubFilter] = useState<string>("all");
+  const [selectedCondition, setSelectedCondition] = useState<string>("all");
+  const [instantAvailableOnly, setInstantAvailableOnly] = useState<boolean>(false);
   const [selectedHub, setSelectedHub] = useState<string>("Central Handover Point • Zone 1");
 
   // User & Data states
@@ -172,6 +174,26 @@ export default function YwDApp() {
       result = result.filter((p) => p.isPurchasable && Boolean(p.buyPrice));
     }
 
+    // Price filter
+    if (maxDailyPrice !== null) {
+      result = result.filter((p) => (p.rentalPriceDaily || 0) <= maxDailyPrice);
+    }
+
+    // Campus Hub filter
+    if (selectedHubFilter !== "all") {
+      result = result.filter((p) => p.campusHub === selectedHubFilter);
+    }
+
+    // Condition Grade filter
+    if (selectedCondition !== "all") {
+      result = result.filter((p) => p.conditionGrade === selectedCondition);
+    }
+
+    // Instant Availability filter
+    if (instantAvailableOnly) {
+      result = result.filter((p) => p.isAvailable !== false);
+    }
+
     // Search query filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
@@ -197,7 +219,18 @@ export default function YwDApp() {
     }
 
     return result;
-  }, [allProducts, selectedCategory, selectedSubcategory, transactionFilter, searchQuery, sortBy]);
+  }, [
+    allProducts,
+    selectedCategory,
+    selectedSubcategory,
+    transactionFilter,
+    maxDailyPrice,
+    selectedHubFilter,
+    selectedCondition,
+    instantAvailableOnly,
+    searchQuery,
+    sortBy,
+  ]);
 
   // Wishlist toggle
   const handleToggleWishlist = async (productId: string) => {
@@ -298,12 +331,6 @@ export default function YwDApp() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F5F0E8] text-[#18352D] selection:bg-[#18352D] selection:text-[#F5F0E8]">
-      {/* Sleek Top Scroll Progress Bar */}
-      <motion.div
-        style={{ scaleX: scrollYProgress }}
-        className="fixed top-0 left-0 right-0 h-[2.5px] z-50 origin-left bg-[#C46A42]"
-      />
-
       {/* Toast popup */}
       <AnimatePresence>
         {toast && (
@@ -352,18 +379,11 @@ export default function YwDApp() {
         cosmicMode={cosmicMode}
       />
 
-      {/* Main Content Area with Screen Transitions */}
+      {/* Main Content Area */}
       <main className="flex-1">
-        <AnimatePresence mode="wait">
           {/* VIEW 1: HOME VIEW */}
           {activeScreen === "home" && (
-            <motion.div
-              key="home"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            >
+            <div>
               {/* Clean Editorial Hero */}
               <div id="hero-section">
                 <HeroSection
@@ -407,6 +427,7 @@ export default function YwDApp() {
               <div id="product-inventory">
                 <ProductGrid
                   products={filteredProducts.slice(0, 8)}
+                  loading={loading}
                   preferredDuration={preferredDuration}
                   setPreferredDuration={setPreferredDuration}
                   sortBy={sortBy}
@@ -445,34 +466,37 @@ export default function YwDApp() {
               <div id="trust-section">
                 <TrustSection />
               </div>
-            </motion.div>
+            </div>
           )}
 
           {/* VIEW 2: EXPLORE MARKETPLACE */}
           {activeScreen === "explore" && (
-            <motion.div
-              key="explore"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
-              className="pt-6"
-            >
-              <CategoryGrid
+            <div>
+              <ExploreCatalog
                 categories={categories}
+                allProducts={allProducts}
+                filteredProducts={filteredProducts}
+                loading={loading}
                 selectedCategory={selectedCategory}
-                onSelectCategory={(slug) => {
-                  setSelectedCategory(slug);
-                  setSelectedSubcategory("all");
-                }}
-                cosmicMode={cosmicMode}
-              />
-              <ProductGrid
-                products={filteredProducts}
+                setSelectedCategory={setSelectedCategory}
+                selectedSubcategory={selectedSubcategory}
+                setSelectedSubcategory={setSelectedSubcategory}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                transactionFilter={transactionFilter}
+                setTransactionFilter={setTransactionFilter}
                 preferredDuration={preferredDuration}
                 setPreferredDuration={setPreferredDuration}
                 sortBy={sortBy}
                 setSortBy={setSortBy}
+                maxDailyPrice={maxDailyPrice}
+                setMaxDailyPrice={setMaxDailyPrice}
+                selectedHubFilter={selectedHubFilter}
+                setSelectedHubFilter={setSelectedHubFilter}
+                selectedCondition={selectedCondition}
+                setSelectedCondition={setSelectedCondition}
+                instantAvailableOnly={instantAvailableOnly}
+                setInstantAvailableOnly={setInstantAvailableOnly}
                 wishlistIds={wishlistIds}
                 onToggleWishlist={handleToggleWishlist}
                 onOpenProductDetail={handleOpenDetail}
@@ -481,27 +505,21 @@ export default function YwDApp() {
                   setSelectedSubcategory("all");
                   setSearchQuery("");
                   setTransactionFilter("all");
+                  setMaxDailyPrice(null);
+                  setSelectedHubFilter("all");
+                  setSelectedCondition("all");
+                  setInstantAvailableOnly(false);
                 }}
-                activeCategoryName={
-                  selectedCategory !== "all"
-                    ? `${activeCategoryObj?.name || "Selected Category"} Listings`
-                    : "All Available Marketplace Gear"
-                }
               />
-            </motion.div>
+            </div>
           )}
 
           {/* VIEW 3: DEDICATED CATEGORIES DIRECTORY VIEW */}
           {activeScreen === "categories" && (
-            <motion.div
-              key="categories"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
-            >
+            <div>
               <CategoriesView
                 categories={categories}
+                allProducts={allProducts}
                 selectedCategory={selectedCategory}
                 onSelectCategory={(slug) => {
                   setSelectedCategory(slug);
@@ -517,29 +535,15 @@ export default function YwDApp() {
                   setSelectedSubcategory("all");
                   setActiveScreen("explore");
                 }}
-              />
-              <ProductGrid
-                products={filteredProducts}
-                preferredDuration={preferredDuration}
-                setPreferredDuration={setPreferredDuration}
-                sortBy={sortBy}
-                setSortBy={setSortBy}
-                wishlistIds={wishlistIds}
-                onToggleWishlist={handleToggleWishlist}
-                onOpenProductDetail={handleOpenDetail}
-                onResetFilters={() => {
-                  setSelectedCategory("all");
-                  setSelectedSubcategory("all");
-                  setSearchQuery("");
-                  setTransactionFilter("all");
+                onSelectCollection={({ categorySlug, subcategorySlug, searchQuery: colQuery }) => {
+                  setSelectedCategory(categorySlug || "all");
+                  setSelectedSubcategory(subcategorySlug || "all");
+                  if (colQuery !== undefined) setSearchQuery(colQuery);
+                  setActiveScreen("explore");
                 }}
-                activeCategoryName={
-                  selectedCategory !== "all"
-                    ? `${activeCategoryObj?.name || "Category"} Listings`
-                    : "Marketplace Listings"
-                }
+                onOpenProductDetail={handleOpenDetail}
               />
-            </motion.div>
+            </div>
           )}
 
           {/* VIEW 4: DASHBOARD / ACTIVE RENTALS / ORDERS / REFUNDS / WISHLIST */}
@@ -549,13 +553,7 @@ export default function YwDApp() {
             activeScreen === "returns" ||
             activeScreen === "refunds" ||
             activeScreen === "wishlist") && (
-            <motion.div
-              key="dashboard"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
-            >
+            <div>
               <UserDashboard
                 initialTab={
                   activeScreen === "rentals"
@@ -588,26 +586,18 @@ export default function YwDApp() {
                 }}
                 onOpenProductDetail={handleOpenDetail}
                 onOpenListProduct={() => setIsListProductOpen(true)}
+                onExplore={() => setActiveScreen("explore")}
               />
-            </motion.div>
+            </div>
           )}
 
           {/* VIEW 5: TRUST & INSPECTION */}
           {activeScreen === "trust" && (
-            <motion.div
-              key="trust"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
-              className="pt-8"
-            >
+            <div>
               <AccessProtocol />
-              <TrustSection />
-              <JourneySection />
-            </motion.div>
+              <TrustSection showFaq />
+            </div>
           )}
-        </AnimatePresence>
       </main>
 
       {/* Footer */}

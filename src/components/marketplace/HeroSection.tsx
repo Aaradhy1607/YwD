@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Search,
   Clock,
@@ -51,7 +51,6 @@ export function HeroSection({
   onOpenGuidedDiscovery,
 }: HeroSectionProps) {
   const containerRef = useRef<HTMLElement>(null);
-  const shouldReduceMotion = useReducedMotion();
 
   // Active showcase item & duration tier
   const [activeIdx, setActiveIdx] = useState(0);
@@ -131,52 +130,6 @@ export function HeroSection({
     currentSpecimen.rates[activeDuration as keyof typeof currentSpecimen.rates] ||
     currentSpecimen.rates.daily;
 
-  // Real scroll-linked kinematics with Framer Motion (Corkwell Camera Zoom)
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end start"],
-  });
-
-  // Scroll transforms for cinematic depth
-  const headlineY = useTransform(
-    scrollYProgress,
-    [0, 1],
-    shouldReduceMotion ? [0, 0] : [0, -110]
-  );
-  const headlineOpacity = useTransform(
-    scrollYProgress,
-    [0, 0.6],
-    shouldReduceMotion ? [1, 1] : [1, 0.1]
-  );
-
-  const productScale = useTransform(
-    scrollYProgress,
-    [0, 1],
-    shouldReduceMotion ? [1, 1] : [1, 1.09]
-  );
-  const productY = useTransform(
-    scrollYProgress,
-    [0, 1],
-    shouldReduceMotion ? [0, 0] : [0, 80]
-  );
-
-  const secondaryImageX = useTransform(
-    scrollYProgress,
-    [0, 1],
-    shouldReduceMotion ? [0, 0] : [0, 60]
-  );
-  const secondaryImageRotate = useTransform(
-    scrollYProgress,
-    [0, 1],
-    shouldReduceMotion ? [0, 0] : [-3, 6]
-  );
-
-  const telemetryY = useTransform(
-    scrollYProgress,
-    [0, 1],
-    shouldReduceMotion ? [0, 0] : [0, -50]
-  );
-
   return (
     <section
       ref={containerRef}
@@ -235,10 +188,7 @@ export function HeroSection({
         </motion.div>
 
         {/* HERO TITLE & BRAND ESSENCE: CORKWELL MONUMENTAL SCALE */}
-        <motion.div
-          style={{ y: headlineY, opacity: headlineOpacity }}
-          className="space-y-6 max-w-5xl"
-        >
+        <div className="space-y-6 max-w-5xl">
           <motion.div
             initial={{ opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
@@ -305,7 +255,7 @@ export function HeroSection({
               </button>
             )}
           </motion.div>
-        </motion.div>
+        </div>
 
         {/* ========================================================
             CORKWELL × CAMBER PRODUCT-LED HERO STAGE
@@ -343,35 +293,28 @@ export function HeroSection({
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             {/* LEFT / CENTER: Master Layered Product Staging (7 cols) */}
             <div className="lg:col-span-7 relative">
-              {/* Secondary Deconstruction Angle (Layered Behind with Offset & Parallax) */}
-              <motion.div
-                style={{
-                  x: secondaryImageX,
-                  rotate: secondaryImageRotate,
-                }}
-                className="absolute -top-6 -right-4 sm:-right-8 w-2/3 h-52 sm:h-72 rounded-2xl overflow-hidden border border-[#2C3831] opacity-45 pointer-events-none hidden sm:block shadow-2xl"
-              >
+              {/* Secondary Deconstruction Angle */}
+              <div className="absolute -top-6 -right-4 sm:-right-8 w-2/3 h-52 sm:h-72 rounded-2xl overflow-hidden border border-[#2C3831] opacity-45 pointer-events-none hidden sm:block shadow-2xl -rotate-3">
                 <img
                   src={currentSpecimen.secondaryImage}
                   alt={`${currentSpecimen.title} Chassis Angle`}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover grayscale contrast-125"
                 />
                 <div className="absolute inset-0 bg-[#0E1F1A]/40" />
-              </motion.div>
+              </div>
 
               {/* Master Photographic Hero Pedestal */}
-              <motion.div
-                style={{
-                  scale: productScale,
-                  y: productY,
-                }}
+              <div
                 onClick={() => onOpenProductDetail(currentSpecimen.id, "rent", activeDuration)}
                 className="relative aspect-[16/10] sm:aspect-[16/9] rounded-3xl overflow-hidden bg-[#0A1713] border border-[#2C3831] shadow-2xl group cursor-pointer"
               >
                 <img
                   src={currentSpecimen.primaryImage}
                   alt={currentSpecimen.title}
-                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
+                  decoding="async"
+                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
                 />
 
                 {/* Ambient Deep Shadow Overlay */}
@@ -379,11 +322,11 @@ export function HeroSection({
 
                 {/* Corner Status Badges */}
                 <div className="absolute top-4 left-4 flex flex-wrap gap-2">
-                  <span className="px-3 py-1 rounded-lg bg-[#18352D]/90 backdrop-blur-md text-xs font-semibold text-white border border-[#2C3831] flex items-center gap-1.5 shadow-sm">
+                  <span className="px-3 py-1 rounded-lg bg-[#18352D]/95 text-xs font-semibold text-white border border-[#2C3831] flex items-center gap-1.5 shadow-sm">
                     <CheckCircle2 className="w-3.5 h-3.5 text-[#789681]" />
                     <span>{currentSpecimen.condition}</span>
                   </span>
-                  <span className="px-3 py-1 rounded-lg bg-[#18352D]/90 backdrop-blur-md text-xs font-mono text-[#D6E0D9] border border-[#2C3831] shadow-sm">
+                  <span className="px-3 py-1 rounded-lg bg-[#18352D]/95 text-xs font-mono text-[#D6E0D9] border border-[#2C3831] shadow-sm">
                     Deposit: {formatINR(currentSpecimen.deposit)} (100% Refundable)
                   </span>
                 </div>
@@ -404,13 +347,10 @@ export function HeroSection({
                     <Maximize2 className="w-4 h-4" />
                   </div>
                 </div>
-              </motion.div>
+              </div>
 
               {/* Corkwell Architectural Coordinate Callouts (Under Hero Canvas) */}
-              <motion.div
-                style={{ y: telemetryY }}
-                className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-4 text-xs font-mono text-[#D6E0D9]"
-              >
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-4 text-xs font-mono text-[#D6E0D9]">
                 {currentSpecimen.telemetry.map((t, idx) => (
                   <div
                     key={idx}
@@ -420,7 +360,7 @@ export function HeroSection({
                     <span className="text-[11px] text-white font-medium block truncate">{t.value}</span>
                   </div>
                 ))}
-              </motion.div>
+              </div>
             </div>
 
             {/* RIGHT: Live Duration Calculator & Access Terminal (5 cols) */}
