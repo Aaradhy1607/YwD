@@ -212,7 +212,7 @@ export default function GetStartedPage() {
           </div>
         </section>
 
-        <section className="border-y border-ywd-border bg-ywd-cream-light" aria-labelledby="steps-heading">
+        <section id="how-it-works" className="scroll-mt-20 border-y border-ywd-border bg-ywd-cream-light" aria-labelledby="steps-heading">
           <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
             <div className="text-center">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ywd-sage-dark">How it works</p>

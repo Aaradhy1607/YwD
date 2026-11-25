@@ -6,7 +6,7 @@ import { ArrowUpRight, ShieldCheck } from "lucide-react";
 
 export function StandaloneHeader() {
   return (
-    <header className="sticky top-0 z-40 border-b border-ywd-border bg-ywd-white/95 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 border-b border-ywd-border bg-ywd-white">
       <div className="mx-auto flex h-[76px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link
           href="/marketplace"
@@ -19,11 +19,11 @@ export function StandaloneHeader() {
           <span className="font-sans text-xl font-semibold tracking-tight text-ywd-forest">YwD</span>
         </Link>
 
-        <nav className="hidden items-center gap-7 md:flex" aria-label="Standalone navigation">
+        <nav className="flex items-center gap-4 sm:gap-7" aria-label="Standalone navigation">
           <Link href="/marketplace" className="text-[13px] font-medium text-ywd-muted transition-colors hover:text-ywd-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ywd-orange">
             Marketplace
           </Link>
-          <Link href="/get-started" className="text-[13px] font-medium text-ywd-muted transition-colors hover:text-ywd-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ywd-orange">
+          <Link href="/get-started#how-it-works" className="text-[13px] font-medium text-ywd-muted transition-colors hover:text-ywd-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ywd-orange">
             How It Works
           </Link>
         </nav>
