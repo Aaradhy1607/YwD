@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { store } from "@/services/store";
 import { buildUpiLink, buildQrUrl, rupeesToPaise } from "@/lib/payments/upi";
+import { calculateRentalPrice, DurationTier } from "@/lib/pricing";
 import { randomUUID } from "crypto";
 
 export async function POST(req: NextRequest) {
@@ -24,7 +25,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { productId, studentName, studentUpi, days } = body;
+  const {
+    productId,
+    studentName,
+    studentUpi,
+    days,
+    durationTier = "daily",
+    durationUnits,
+    deliveryMethod = "PICKUP",
+  } = body;
   if (!productId) {
     return NextResponse.json({ error: "productId is required" }, { status: 400 });
   }
@@ -42,11 +51,28 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Product is not available for rent" }, { status: 409 });
       }
 
-      // Backend-authoritative amount calculation (paise)
-      const daysCount = Math.max(1, Math.round(Number(days) || 1));
-      const rentPaise = rupeesToPaise(product.rentalPriceDaily * daysCount);
-      const depositPaise = rupeesToPaise(product.deposit);
-      const totalPaise = rentPaise + depositPaise;
+      // Backend-authoritative amount calculation with tier rates, delivery, platform fee, and GST
+      const units = Math.max(1, Math.round(Number(durationUnits) || Number(days) || 1));
+      const method = deliveryMethod === "DELIVERY" ? "DELIVERY" : "PICKUP";
+
+      const pricing = calculateRentalPrice({
+        rates: {
+          hourly: product.rentalPriceHourly || Math.round(product.rentalPriceDaily / 6),
+          daily: product.rentalPriceDaily,
+          weekly: product.rentalPriceWeekly,
+          monthly: product.rentalPriceMonthly || Math.round(product.rentalPriceWeekly * 3.4),
+          semester: product.rentalPriceSemester || Math.round(product.rentalPriceWeekly * 8.5),
+          deposit: product.deposit,
+        },
+        durationTier: (durationTier as DurationTier) || "daily",
+        durationUnits: units,
+        deliveryMethod: method,
+        customDeliveryFee: method === "DELIVERY" ? 99 : 0,
+      });
+
+      const depositPaise = rupeesToPaise(pricing.securityDeposit);
+      const totalPaise = rupeesToPaise(pricing.totalPayable);
+      const rentPaise = totalPaise - depositPaise;
 
       const orderId = randomUUID().replace(/-/g, "").slice(0, 16).toUpperCase();
 
@@ -81,6 +107,7 @@ export async function POST(req: NextRequest) {
         totalPaise,
         status: rental.status,
         productTitle: product.title,
+        pricing,
       });
     } catch (e: any) {
       console.error("[POST /api/rentals] PG error:", e);
@@ -96,10 +123,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    const daysCount = Math.max(1, Math.round(Number(days) || 1));
-    const rentPaise = rupeesToPaise((product.rentalPriceDaily || 0) * daysCount);
-    const depositPaise = rupeesToPaise(product.deposit || 0);
-    const totalPaise = rentPaise + depositPaise;
+    const units = Math.max(1, Math.round(Number(durationUnits) || Number(days) || 1));
+    const method = deliveryMethod === "DELIVERY" ? "DELIVERY" : "PICKUP";
+
+    const pricing = calculateRentalPrice({
+      rates: {
+        hourly: product.rentalPriceHourly || Math.round((product.rentalPriceDaily || 0) / 6),
+        daily: product.rentalPriceDaily || 0,
+        weekly: product.rentalPriceWeekly || 0,
+        monthly: product.rentalPriceMonthly || Math.round((product.rentalPriceWeekly || 0) * 3.4),
+        semester: product.rentalPriceSemester || Math.round((product.rentalPriceWeekly || 0) * 8.5),
+        deposit: product.deposit || 0,
+      },
+      durationTier: (durationTier as DurationTier) || "daily",
+      durationUnits: units,
+      deliveryMethod: method,
+      customDeliveryFee: method === "DELIVERY" ? 99 : 0,
+    });
+
+    const depositPaise = rupeesToPaise(pricing.securityDeposit);
+    const totalPaise = rupeesToPaise(pricing.totalPayable);
+    const rentPaise = totalPaise - depositPaise;
 
     const orderId = randomUUID().replace(/-/g, "").slice(0, 16).toUpperCase();
     let upiLink: string;
@@ -139,6 +183,7 @@ export async function POST(req: NextRequest) {
       totalPaise,
       status: rental.status,
       productTitle: product.title,
+      pricing,
     });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || "Failed to create rental" }, { status: 500 });

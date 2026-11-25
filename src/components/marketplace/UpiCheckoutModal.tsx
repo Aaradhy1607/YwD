@@ -78,7 +78,7 @@ export function UpiCheckoutModal({ rental, onPaid, onClose }: UpiCheckoutModalPr
           {/* Amount Breakdown */}
           <div className="bg-[#FAF7F2] rounded-xl border border-[#E5DEC9] overflow-hidden text-sm">
             <div className="flex justify-between px-4 py-2.5 border-b border-[#E5DEC9]">
-              <span className="text-[#63736A]">Rent</span>
+              <span className="text-[#63736A]">Rent & Quoted Fees</span>
               <span className="font-mono text-[#18352D]">{paiseToRupees(rental.rentPaise)}</span>
             </div>
             <div className="flex justify-between px-4 py-2.5 border-b border-[#E5DEC9]">

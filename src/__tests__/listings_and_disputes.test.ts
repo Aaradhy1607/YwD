@@ -69,6 +69,15 @@ describe("Product Listings & Ownership Authorization", () => {
     expect(reToggled?.isAvailable).toBe(true);
   });
 
+  it("searches and filters marketplace inventory efficiently", async () => {
+    const searchResult = await getProducts({ query: "GoPro", limit: 5 });
+    expect(searchResult.products.length).toBeGreaterThanOrEqual(1);
+    expect(searchResult.products[0].title.toLowerCase()).toContain("gopro");
+
+    const categoryResult = await getProducts({ category: "cat_electronics" });
+    expect(categoryResult.products.every((p) => p.categoryId === "cat_electronics")).toBe(true);
+  });
+
   it("prevents unauthorized users from deleting another user's listing", async () => {
     await expect(
       deleteProductListing(createdProduct.id, otherUserId)
@@ -78,15 +87,6 @@ describe("Product Listings & Ownership Authorization", () => {
   it("allows owner to delete their listing when there are no active bookings", async () => {
     const result = await deleteProductListing(createdProduct.id, ownerId);
     expect(result.success).toBe(true);
-  });
-
-  it("searches and filters marketplace inventory efficiently", async () => {
-    const searchResult = await getProducts({ query: "Sony", limit: 5 });
-    expect(searchResult.products.length).toBeGreaterThanOrEqual(1);
-    expect(searchResult.products[0].title.toLowerCase()).toContain("sony");
-
-    const categoryResult = await getProducts({ category: "cat_cameras" });
-    expect(categoryResult.products.every((p) => p.categoryId === "cat_cameras" || p.categorySlug === "cameras")).toBe(true);
   });
 });
 
