@@ -39,8 +39,8 @@ function LoginContent() {
   return (
     <div className="min-h-screen bg-[#F5F0E8] flex flex-col justify-between py-8 px-4 sm:px-6">
       {/* Top Header */}
-      <div className="max-w-6xl mx-auto w-full flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3 group">
+      <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
+        <Link href="/marketplace" className="flex items-center gap-3 group">
           <div className="w-9 h-9 rounded-full overflow-hidden bg-[#FAF7F2] border border-[#E5DEC9] shadow-xs group-hover:scale-105 transition-transform shrink-0">
             <img src="/images/ywd-logo.png" alt="YwD Insignia" className="w-full h-full object-cover" />
           </div>
@@ -56,8 +56,8 @@ function LoginContent() {
         </Link>
 
         <Link
-          href="/"
-          className="text-xs text-[#18352D] hover:text-[#C46A42] flex items-center gap-1.5 transition-colors font-medium"
+          href="/marketplace"
+          className="text-xs font-semibold text-[#18352D] hover:text-[#C46A42] flex items-center gap-1.5 transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to marketplace</span>

@@ -8,6 +8,17 @@ import { ParticleField } from "./effects/ParticleField";
 import { PostFX } from "./effects/PostFX";
 import { SceneManager } from "./SceneManager";
 
+// Suppress known Three.js v0.187+ internal deprecation warning triggered by @react-three/fiber
+if (typeof window !== "undefined") {
+  const originalWarn = console.warn;
+  console.warn = (...args: any[]) => {
+    if (typeof args[0] === "string" && args[0].includes("THREE.Clock: This module has been deprecated")) {
+      return;
+    }
+    originalWarn(...args);
+  };
+}
+
 // Dynamically import GlobalCanvas so it only renders on client
 const GlobalCanvas = dynamic(
   () => import("./GlobalCanvas").then((mod) => mod.GlobalCanvas),

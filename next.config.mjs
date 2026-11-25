@@ -1,6 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ['framer-motion'],
+  experimental: {
+    cpus: 1,
+  },
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/get-started',
+        permanent: false,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

@@ -22,6 +22,8 @@ interface DevDB {
   disputes: any[];
   auditLogs: any[];
   verificationTokens: any[];
+  rentals: any[];
+  ledger: any[];
 }
 
 function initDevDB(): DevDB {
@@ -184,6 +186,8 @@ function initDevDB(): DevDB {
     disputes: [],
     auditLogs: [],
     verificationTokens: [],
+    rentals: [],
+    ledger: [],
   };
 }
 
@@ -209,6 +213,8 @@ class StoreManager {
         if (!parsed.auditLogs) parsed.auditLogs = [];
         if (!parsed.disputes) parsed.disputes = [];
         if (!parsed.verificationTokens) parsed.verificationTokens = [];
+        if (!parsed.rentals) parsed.rentals = [];
+        if (!parsed.ledger) parsed.ledger = [];
         return parsed;
       }
     } catch (e) {
