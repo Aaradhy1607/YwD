@@ -6,6 +6,25 @@ import { buildUpiLink, buildQrUrl, rupeesToPaise } from "@/lib/payments/upi";
 import { calculateRentalPrice, DurationTier } from "@/lib/pricing";
 import { randomUUID } from "crypto";
 
+let hasCheckedUserIdColumn = false;
+async function ensureUserIdColumn(): Promise<boolean> {
+  if (hasCheckedUserIdColumn) return true;
+  try {
+    await (prisma as any).$executeRawUnsafe(
+      'ALTER TABLE "rentals" ADD COLUMN IF NOT EXISTS "user_id" TEXT DEFAULT \'usr_default_demo\';'
+    );
+    try {
+      await (prisma as any).$executeRawUnsafe(
+        'CREATE INDEX IF NOT EXISTS "rentals_user_id_idx" ON "rentals"("user_id");'
+      );
+    } catch {}
+    hasCheckedUserIdColumn = true;
+    return true;
+  } catch (err: any) {
+    return false;
+  }
+}
+
 export async function POST(req: NextRequest) {
   let session: any = null;
   try {
@@ -84,18 +103,54 @@ export async function POST(req: NextRequest) {
       }
       const qrUrl = buildQrUrl(upiLink);
 
-      const rental = await (prisma as any).rental.create({
-        data: {
-          id: orderId,
-          itemId: productId,
-          userId,
-          studentName: studentName || session?.user?.name || "Student (Demo)",
-          studentUpi: studentUpi || null,
-          rentPaise,
-          depositPaise,
-          status: "CREATED",
-        },
-      });
+      await ensureUserIdColumn();
+
+      let rental: any;
+      try {
+        rental = await (prisma as any).rental.create({
+          data: {
+            id: orderId,
+            itemId: productId,
+            userId,
+            studentName: studentName || session?.user?.name || "Student (Demo)",
+            studentUpi: studentUpi || null,
+            rentPaise,
+            depositPaise,
+            status: "CREATED",
+          },
+        });
+      } catch (insertErr: any) {
+        const msg = String(insertErr?.message || "").toLowerCase();
+        if (
+          msg.includes("user_id") ||
+          msg.includes("does not exist") ||
+          insertErr?.code === "P2021" ||
+          insertErr?.code === "P2022"
+        ) {
+          await (prisma as any).$executeRawUnsafe(
+            `INSERT INTO "rentals" ("id", "item_id", "student_name", "student_upi", "rent_paise", "deposit_paise", "status", "created_at", "updated_at")
+             VALUES ($1, $2, $3, $4, $5, $6, 'CREATED', NOW(), NOW())`,
+            orderId,
+            productId,
+            studentName || session?.user?.name || "Student (Demo)",
+            studentUpi || null,
+            rentPaise,
+            depositPaise
+          );
+          rental = {
+            id: orderId,
+            itemId: productId,
+            userId,
+            studentName: studentName || session?.user?.name || "Student (Demo)",
+            studentUpi: studentUpi || null,
+            rentPaise,
+            depositPaise,
+            status: "CREATED",
+          };
+        } else {
+          throw insertErr;
+        }
+      }
 
       return NextResponse.json({
         id: rental.id,
@@ -206,14 +261,47 @@ export async function GET() {
 
   if (isPg) {
     try {
-      const rentals = await (prisma as any).rental.findMany({
-        where: { userId },
-        include: {
-          product: { select: { title: true } },
-          ledgerEntries: true,
-        },
-        orderBy: { createdAt: "desc" },
-      });
+      await ensureUserIdColumn();
+
+      let rentals: any[] = [];
+      try {
+        rentals = await (prisma as any).rental.findMany({
+          where: { userId },
+          include: {
+            product: { select: { title: true } },
+            ledgerEntries: true,
+          },
+          orderBy: { createdAt: "desc" },
+        });
+      } catch (queryErr: any) {
+        const msg = String(queryErr?.message || "").toLowerCase();
+        if (
+          msg.includes("user_id") ||
+          msg.includes("does not exist") ||
+          queryErr?.code === "P2021" ||
+          queryErr?.code === "P2022"
+        ) {
+          const rawRentals = await (prisma as any).$queryRawUnsafe(
+            `SELECT r."id", r."item_id" as "itemId", r."student_name" as "studentName", 
+                    r."student_upi" as "studentUpi", r."rent_paise" as "rentPaise", 
+                    r."deposit_paise" as "depositPaise", r."damage_paise" as "damagePaise", 
+                    r."status", r."created_at" as "createdAt", r."updated_at" as "updatedAt",
+                    p."title" as "productTitle"
+             FROM "rentals" r
+             LEFT JOIN "products" p ON r."item_id" = p."id"
+             ORDER BY r."created_at" DESC`
+          );
+          rentals = (rawRentals as any[]).map((r: any) => ({
+            ...r,
+            userId,
+            product: { title: r.productTitle },
+            ledgerEntries: [],
+          }));
+        } else {
+          throw queryErr;
+        }
+      }
+
       return NextResponse.json({
         rentals: rentals.map((r: any) => ({
           ...r,

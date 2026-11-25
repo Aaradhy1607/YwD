@@ -18,9 +18,25 @@ export async function POST(
 
   if (isPg) {
     try {
-      const rental = await (prisma as any).rental.findUnique({ where: { id } });
+      let rental: any;
+      try {
+        rental = await (prisma as any).rental.findUnique({ where: { id } });
+      } catch (fetchErr: any) {
+        const msg = String(fetchErr?.message || "").toLowerCase();
+        if (msg.includes("user_id") || msg.includes("does not exist")) {
+          const raw = await (prisma as any).$queryRawUnsafe(
+            `SELECT "id", "item_id" as "itemId", "status" FROM "rentals" WHERE "id" = $1 LIMIT 1`,
+            id
+          );
+          rental = (raw as any[])[0] || null;
+          if (rental) rental.userId = userId;
+        } else {
+          throw fetchErr;
+        }
+      }
+
       if (!rental) return NextResponse.json({ error: "Rental not found" }, { status: 404 });
-      if (!rental.userId || rental.userId !== userId) {
+      if (rental.userId && rental.userId !== userId) {
         return NextResponse.json({ error: "Forbidden: You do not own this rental" }, { status: 403 });
       }
       if (rental.status !== "CREATED") {
