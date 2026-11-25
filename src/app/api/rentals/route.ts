@@ -25,6 +25,20 @@ async function ensureUserIdColumn(): Promise<boolean> {
   }
 }
 
+async function backfillLegacyRentals(): Promise<void> {
+  try {
+    await (prisma as any).$executeRawUnsafe(`
+      UPDATE "rentals" r
+      SET "user_id" = u."id"
+      FROM "users" u
+      WHERE (r."user_id" = 'usr_default_demo' OR r."user_id" IS NULL)
+        AND u."name" IS NOT NULL
+        AND r."student_name" = u."name"
+        AND r."student_name" != 'Student (Demo)'
+    `);
+  } catch {}
+}
+
 export async function POST(req: NextRequest) {
   let session: any = null;
   try {
@@ -262,11 +276,29 @@ export async function GET() {
   if (isPg) {
     try {
       await ensureUserIdColumn();
+      await backfillLegacyRentals();
+
+      if (session?.user?.name && session.user.name !== "Student (Demo)") {
+        try {
+          await (prisma as any).rental.updateMany({
+            where: {
+              userId: "usr_default_demo",
+              studentName: session.user.name,
+            },
+            data: { userId },
+          });
+        } catch {}
+      }
 
       let rentals: any[] = [];
       try {
+        const whereClause =
+          userId === "usr_default_demo"
+            ? { userId: "usr_default_demo", studentName: "Student (Demo)" }
+            : { userId };
+
         rentals = await (prisma as any).rental.findMany({
-          where: { userId },
+          where: whereClause,
           include: {
             product: { select: { title: true } },
             ledgerEntries: true,
@@ -315,6 +347,36 @@ export async function GET() {
   }
 
   const db = store.getDB() as any;
-  const rentals = (db.rentals || []).filter((r: any) => r.userId === userId);
+  if (!db.rentals) db.rentals = [];
+
+  // Handle records without userId or assigned to shared demo in fallback store before applying owner filter
+  let dbModified = false;
+  for (const r of db.rentals) {
+    if (!r.userId || (r.userId === "usr_default_demo" && r.studentName !== "Student (Demo)")) {
+      const matched = (db.users || []).find(
+        (u: any) => u.name && u.name === r.studentName && u.name !== "Student (Demo)"
+      );
+      if (matched) {
+        r.userId = matched.id;
+        dbModified = true;
+      } else if (session?.user?.name && r.studentName === session.user.name) {
+        r.userId = userId;
+        dbModified = true;
+      } else if (!r.userId) {
+        r.userId = "usr_default_demo";
+        dbModified = true;
+      }
+    }
+  }
+  if (dbModified) {
+    store.updateDB(() => {});
+  }
+
+  const rentals = (db.rentals || []).filter((r: any) => {
+    if (userId === "usr_default_demo") {
+      return r.userId === "usr_default_demo" && r.studentName === "Student (Demo)";
+    }
+    return r.userId === userId;
+  });
   return NextResponse.json({ rentals });
 }
