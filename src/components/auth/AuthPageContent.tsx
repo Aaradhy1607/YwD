@@ -42,10 +42,19 @@ export function AuthPageContent() {
     const errorParam = searchParams.get("error");
     if (errorParam) {
       const errorMap: Record<string, string> = {
-        AccessDenied: "Google sign-in was cancelled or denied. Please try again or use email.",
+        AccessDenied:
+          "Google sign-in could not be completed (access denied). Please ensure you granted permission or use email.",
         Configuration: "Google OAuth is not configured properly on this server.",
         OAuthAccountNotLinked: "This email is already registered with another sign-in method.",
-        OAuthCallbackError: "Google sign-in could not be completed. Please try again.",
+        OAuthCallbackError: "Google sign-in callback failed. Please try again.",
+        OAuthSignin: "Could not start Google sign-in. Please check server OAuth configuration.",
+        OAuthCreateAccount: "Could not create your account from Google sign-in. Please try again.",
+        OAuthSyncError:
+          "Google sign-in succeeded, but syncing your account failed. Please try again or contact support.",
+        DatabaseUnavailable:
+          "Sign-in is temporarily unavailable because the database connection could not be established.",
+        GoogleEmailUnverified:
+          "Your Google account email is not verified. Please verify it in Google or use email.",
       };
       setOauthError(
         errorMap[errorParam] ||

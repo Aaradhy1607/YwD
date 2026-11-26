@@ -88,13 +88,63 @@ describe("Google OAuth User Sync & Account Linking", () => {
       { provider: "google", providerAccountId: "g-1" }
     );
     expect(missingEmail.allowed).toBe(false);
+    expect(missingEmail.errorCode).toBe("MISSING_EMAIL");
 
     const unverified = await syncGoogleUser(
       { email: "test@example.com", emailVerified: false },
       { provider: "google", providerAccountId: "g-2" }
     );
     expect(unverified.allowed).toBe(false);
+    expect(unverified.errorCode).toBe("EMAIL_UNVERIFIED");
     expect(mockUserCreate).not.toHaveBeenCalled();
+  });
+
+  it("still allows Google sign-in even if welcome notification creation fails", async () => {
+    mockAccountFindUnique.mockResolvedValue(null);
+    mockUserFindUnique.mockResolvedValue(null);
+    mockUserCreate.mockResolvedValue({
+      id: "usr_google_notif_fail",
+      email: "notif@university.edu",
+      name: "Notif User",
+      role: "USER",
+      anonymousProfile: { alias: "EcoRenter-5555" },
+    });
+    mockNotificationCreate.mockRejectedValueOnce(new Error("Notification table error"));
+
+    const result = await syncGoogleUser(
+      {
+        email: "notif@university.edu",
+        name: "Notif User",
+        emailVerified: true,
+      },
+      {
+        provider: "google",
+        providerAccountId: "google-sub-notif",
+        type: "oidc",
+      }
+    );
+
+    expect(result).toEqual({ allowed: true, userId: "usr_google_notif_fail" });
+  });
+
+  it("returns OAUTH_SYNC_ERROR when Postgres throws during sync instead of throwing uncaught", async () => {
+    mockAccountFindUnique.mockRejectedValueOnce(new Error("Connection terminated"));
+
+    const result = await syncGoogleUser(
+      {
+        email: "dbdown@university.edu",
+        name: "DB Down",
+        emailVerified: true,
+      },
+      {
+        provider: "google",
+        providerAccountId: "google-sub-err",
+        type: "oidc",
+      }
+    );
+
+    expect(result.allowed).toBe(false);
+    expect(result.errorCode).toBe("OAUTH_SYNC_ERROR");
   });
 
   it("creates a new User, AnonymousProfile, Account, and Notification for a first-time Google user", async () => {

@@ -7,12 +7,15 @@ import { generateAnonymousAlias, getRandomAvatarColor } from "./privacy";
 import { verifyPassword, checkRateLimit, logAuditEvent } from "./security";
 import { syncGoogleUser } from "./google-auth";
 
+const googleClientId = process.env.AUTH_GOOGLE_ID?.trim() || "";
+const googleClientSecret = process.env.AUTH_GOOGLE_SECRET?.trim() || "";
+
 const isGoogleConfigured = Boolean(
-  process.env.AUTH_GOOGLE_ID &&
-  process.env.AUTH_GOOGLE_SECRET &&
-  !process.env.AUTH_GOOGLE_ID.includes("placeholder") &&
-  !process.env.AUTH_GOOGLE_SECRET.includes("placeholder") &&
-  !process.env.AUTH_GOOGLE_ID.includes("your-google")
+  googleClientId &&
+  googleClientSecret &&
+  !googleClientId.includes("placeholder") &&
+  !googleClientSecret.includes("placeholder") &&
+  !googleClientId.includes("your-google")
 );
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -25,8 +28,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     ...(isGoogleConfigured
       ? [
           Google({
-            clientId: process.env.AUTH_GOOGLE_ID || "",
-            clientSecret: process.env.AUTH_GOOGLE_SECRET || "",
+            clientId: googleClientId,
+            clientSecret: googleClientSecret,
           }),
         ]
       : []),
@@ -183,33 +186,54 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     async signIn({ user, account, profile }) {
       if (account?.provider === "google") {
-        const result = await syncGoogleUser(
-          {
-            email: user.email || (profile as any)?.email,
-            name: user.name || (profile as any)?.name,
-            image: user.image || (profile as any)?.picture,
-            emailVerified: (profile as any)?.email_verified,
-          },
-          {
-            provider: account.provider,
-            providerAccountId: account.providerAccountId,
-            type: account.type,
-            refresh_token: account.refresh_token,
-            access_token: account.access_token,
-            expires_at: account.expires_at,
-            token_type: account.token_type,
-            scope: account.scope,
-            id_token: account.id_token,
-            session_state: account.session_state,
+        try {
+          const result = await syncGoogleUser(
+            {
+              email: user.email || (profile as any)?.email,
+              name: user.name || (profile as any)?.name,
+              image: user.image || (profile as any)?.picture,
+              emailVerified: (profile as any)?.email_verified,
+            },
+            {
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
+              type: account.type,
+              refresh_token: account.refresh_token,
+              access_token: account.access_token,
+              expires_at: account.expires_at,
+              token_type: account.token_type,
+              scope: account.scope,
+              id_token: account.id_token,
+              session_state: account.session_state,
+            }
+          );
+
+          if (!result.allowed || !result.userId) {
+            console.error("[Auth] Google signIn rejected:", {
+              errorCode: result.errorCode || "UNKNOWN",
+              reason: result.reason || "Sync failed",
+            });
+            if (result.errorCode === "EMAIL_UNVERIFIED") {
+              return "/login?error=GoogleEmailUnverified";
+            }
+            if (result.errorCode === "DATABASE_UNAVAILABLE") {
+              return "/login?error=DatabaseUnavailable";
+            }
+            if (result.errorCode === "OAUTH_SYNC_ERROR" || result.errorCode === "MISSING_EMAIL") {
+              return "/login?error=OAuthSyncError";
+            }
+            return "/login?error=OAuthSyncError";
           }
-        );
 
-        if (!result.allowed || !result.userId) {
-          return false;
+          // Bind YwD database user.id so jwt() stores it in token.sub
+          user.id = result.userId;
+        } catch (err: any) {
+          console.error("[Auth] Unexpected error in Google signIn callback:", {
+            name: err?.name || "Error",
+            message: err?.message || "Unexpected error",
+          });
+          return "/login?error=OAuthSyncError";
         }
-
-        // Bind YwD database user.id so jwt() stores it in token.sub
-        user.id = result.userId;
       }
       return true;
     },

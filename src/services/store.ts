@@ -260,7 +260,7 @@ class StoreManager {
     if (process.env.NODE_ENV === "test" || process.env.VITEST) {
       return false;
     }
-    if (this.isPostgresAvailable !== null) return this.isPostgresAvailable;
+    if (this.isPostgresAvailable === true) return true;
     const dbUrl = process.env.DATABASE_URL;
     if (!dbUrl || dbUrl.includes("localhost:5432") || dbUrl.includes("placeholder")) {
       this.isPostgresAvailable = false;
@@ -271,7 +271,8 @@ class StoreManager {
       this.isPostgresAvailable = true;
       console.log("[YwD DB] Connected successfully to PostgreSQL database.");
       return true;
-    } catch {
+    } catch (err: any) {
+      console.warn("[YwD DB] PostgreSQL connectivity check failed:", err?.code || err?.message || "Unknown error");
       this.isPostgresAvailable = false;
       return false;
     }

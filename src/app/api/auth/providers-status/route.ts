@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
+  const clientId = process.env.AUTH_GOOGLE_ID?.trim() || "";
+  const clientSecret = process.env.AUTH_GOOGLE_SECRET?.trim() || "";
+
   const googleConfigured = Boolean(
-    process.env.AUTH_GOOGLE_ID &&
-    process.env.AUTH_GOOGLE_SECRET &&
-    !process.env.AUTH_GOOGLE_ID.includes("placeholder") &&
-    !process.env.AUTH_GOOGLE_SECRET.includes("placeholder") &&
-    !process.env.AUTH_GOOGLE_ID.includes("your-google")
+    clientId &&
+    clientSecret &&
+    !clientId.includes("placeholder") &&
+    !clientSecret.includes("placeholder") &&
+    !clientId.includes("your-google")
   );
 
   return NextResponse.json({

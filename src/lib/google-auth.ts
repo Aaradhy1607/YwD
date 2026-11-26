@@ -23,10 +23,17 @@ export interface GoogleOAuthAccount {
   session_state?: unknown;
 }
 
+export type GoogleSyncErrorCode =
+  | "MISSING_EMAIL"
+  | "EMAIL_UNVERIFIED"
+  | "DATABASE_UNAVAILABLE"
+  | "OAUTH_SYNC_ERROR";
+
 export interface SyncGoogleUserResult {
   allowed: boolean;
   userId?: string;
   reason?: string;
+  errorCode?: GoogleSyncErrorCode;
 }
 
 const DEFAULT_CAMPUS_HUB = "North Campus Central Hub • Block B";
@@ -43,11 +50,34 @@ export async function syncGoogleUser(
 ): Promise<SyncGoogleUserResult> {
   const email = profile.email?.toLowerCase().trim();
   if (!email) {
-    return { allowed: false, reason: "Missing email address from Google profile." };
+    console.warn("[Google Auth] Rejected sign-in: missing email on Google profile.", {
+      provider: account.provider,
+    });
+    return {
+      allowed: false,
+      errorCode: "MISSING_EMAIL",
+      reason: "Missing email address from Google profile.",
+    };
   }
 
   if (profile.emailVerified === false) {
-    return { allowed: false, reason: "Google email address is not verified." };
+    console.warn("[Google Auth] Rejected sign-in: Google email is not verified.", {
+      provider: account.provider,
+    });
+    return {
+      allowed: false,
+      errorCode: "EMAIL_UNVERIFIED",
+      reason: "Google email address is not verified.",
+    };
+  }
+
+  if (!account.providerAccountId) {
+    console.error("[Google Auth] Missing providerAccountId from Google OAuth callback.");
+    return {
+      allowed: false,
+      errorCode: "OAUTH_SYNC_ERROR",
+      reason: "Missing Google account identifier.",
+    };
   }
 
   const isPg = await store.checkPostgres();
@@ -113,12 +143,14 @@ export async function syncGoogleUser(
           });
         }
 
-        await logAuditEvent({
-          userId: dbUser.id,
-          action: "USER_LOGIN_SUCCESS",
-          resource: "auth",
-          metadata: { email: dbUser.email, provider: "google" },
-        });
+        try {
+          await logAuditEvent({
+            userId: dbUser.id,
+            action: "USER_LOGIN_SUCCESS",
+            resource: "auth",
+            metadata: { email: dbUser.email, provider: "google" },
+          });
+        } catch {}
 
         return { allowed: true, userId: dbUser.id };
       }
@@ -130,22 +162,28 @@ export async function syncGoogleUser(
       });
 
       if (dbUser) {
-        await prisma.account.create({
-          data: {
-            userId: dbUser.id,
-            type: account.type || "oauth",
-            provider: account.provider,
-            providerAccountId: account.providerAccountId,
-            refresh_token: account.refresh_token ?? null,
-            access_token: account.access_token ?? null,
-            expires_at: account.expires_at ?? null,
-            token_type: account.token_type ?? null,
-            scope: account.scope ?? null,
-            id_token: account.id_token ?? null,
-            session_state:
-              typeof account.session_state === "string" ? account.session_state : null,
-          },
-        });
+        try {
+          await prisma.account.create({
+            data: {
+              userId: dbUser.id,
+              type: account.type || "oauth",
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
+              refresh_token: account.refresh_token ?? null,
+              access_token: account.access_token ?? null,
+              expires_at: account.expires_at ?? null,
+              token_type: account.token_type ?? null,
+              scope: account.scope ?? null,
+              id_token: account.id_token ?? null,
+              session_state:
+                typeof account.session_state === "string" ? account.session_state : null,
+            },
+          });
+        } catch (linkErr: any) {
+          if (linkErr?.code !== "P2002") {
+            throw linkErr;
+          }
+        }
 
         const userUpdates: Record<string, any> = {};
         if (!dbUser.emailVerified) userUpdates.emailVerified = new Date();
@@ -174,12 +212,14 @@ export async function syncGoogleUser(
           });
         }
 
-        await logAuditEvent({
-          userId: dbUser.id,
-          action: "USER_LOGIN_SUCCESS",
-          resource: "auth",
-          metadata: { email: dbUser.email, provider: "google", linkedExisting: true },
-        });
+        try {
+          await logAuditEvent({
+            userId: dbUser.id,
+            action: "USER_LOGIN_SUCCESS",
+            resource: "auth",
+            metadata: { email: dbUser.email, provider: "google", linkedExisting: true },
+          });
+        } catch {}
 
         return { allowed: true, userId: dbUser.id };
       }
@@ -225,32 +265,57 @@ export async function syncGoogleUser(
         include: { anonymousProfile: true },
       });
 
-      await prisma.notification.create({
-        data: {
-          userId: dbUser.id,
-          title: "Welcome to YwD Marketplace",
-          message: `Your anonymous identity has been provisioned as ${alias}. Your private phone & email are strictly shielded from counterparties.`,
-          type: "SYSTEM",
-          link: "/dashboard?tab=privacy",
-        },
-      });
+      try {
+        await prisma.notification.create({
+          data: {
+            userId: dbUser.id,
+            title: "Welcome to YwD Marketplace",
+            message: `Your anonymous identity has been provisioned as ${alias}. Your private phone & email are strictly shielded from counterparties.`,
+            type: "SYSTEM",
+            link: "/dashboard?tab=privacy",
+          },
+        });
+      } catch (notifErr: any) {
+        console.warn("[Google Auth] Non-critical welcome notification failed:", notifErr?.code || notifErr?.message);
+      }
 
-      await logAuditEvent({
-        userId: dbUser.id,
-        action: "USER_REGISTER",
-        resource: "users",
-        metadata: { alias, provider: "google" },
-      });
+      try {
+        await logAuditEvent({
+          userId: dbUser.id,
+          action: "USER_REGISTER",
+          resource: "users",
+          metadata: { alias, provider: "google" },
+        });
+      } catch {}
 
       return { allowed: true, userId: dbUser.id };
-    } catch (err) {
-      console.error("[Google Auth] Postgres sync failed:", err);
-      return { allowed: false, reason: "Failed to sync Google account with database." };
+    } catch (err: any) {
+      console.error("[Google Auth] Postgres sync failed:", {
+        code: err?.code || "UNKNOWN",
+        name: err?.name || "Error",
+        message: err?.message || "Unknown database error",
+      });
+      return {
+        allowed: false,
+        errorCode: "OAUTH_SYNC_ERROR",
+        reason: "Failed to sync Google account with database.",
+      };
     }
   }
 
   // Fallback for local development without PostgreSQL
-  store.assertProductionDatabase();
+  try {
+    store.assertProductionDatabase();
+  } catch (dbErr: any) {
+    console.error("[Google Auth] Production database unavailable during Google sign-in:", {
+      message: dbErr?.message || "DATABASE_UNAVAILABLE",
+    });
+    return {
+      allowed: false,
+      errorCode: "DATABASE_UNAVAILABLE",
+      reason: "Database is currently unavailable.",
+    };
+  }
 
   let devUser = store.getDB().users.find((u) => u.email === email);
   if (!devUser) {
