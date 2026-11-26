@@ -27,11 +27,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     ...(isGoogleConfigured
       ? [
-          Google({
-            clientId: googleClientId,
-            clientSecret: googleClientSecret,
-          }),
-        ]
+        Google({
+          clientId: googleClientId,
+          clientSecret: googleClientSecret,
+        }),
+      ]
       : []),
     Credentials({
       id: "credentials",
@@ -133,7 +133,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               where: { email },
               include: { anonymousProfile: true },
             });
-          } catch {}
+          } catch { }
         }
 
         if (!user) {
@@ -220,7 +220,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               return "/login?error=GoogleEmailMissing";
             }
             if (result.errorCode === "DATABASE_SCHEMA_ERROR") {
-              return "/login?error=DatabaseSchemaError";
+              const params = new URLSearchParams({ error: "DatabaseSchemaError" });
+              if (result.prismaCode) params.set("code", result.prismaCode);
+              if (result.failedStep) params.set("step", result.failedStep);
+              return `/login?${params.toString()}`;
             }
             if (result.errorCode === "DATABASE_UNAVAILABLE") {
               return "/login?error=DatabaseUnavailable";
@@ -253,7 +256,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               where: { id: userId },
               include: { anonymousProfile: true },
             });
-          } catch {}
+          } catch { }
         }
 
         if (!dbUser) {

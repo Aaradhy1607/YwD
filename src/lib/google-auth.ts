@@ -35,6 +35,8 @@ export interface SyncGoogleUserResult {
   userId?: string;
   reason?: string;
   errorCode?: GoogleSyncErrorCode;
+  prismaCode?: string;
+  failedStep?: string;
 }
 
 const DEFAULT_CAMPUS_HUB = "North Campus Central Hub • Block B";
@@ -355,11 +357,19 @@ export async function syncGoogleUser(
       return { allowed: true, userId: dbUser.id };
     } catch (err: any) {
       const code = err?.code || "UNKNOWN";
+      let dbHost = "unknown";
+      try {
+        if (process.env.DATABASE_URL) {
+          dbHost = new URL(process.env.DATABASE_URL).hostname;
+        }
+      } catch {}
+
       console.error("[Google Auth] Postgres sync failed:", {
         step,
         code,
         name: err?.name || "Error",
-        metaTarget: err?.meta?.target,
+        dbHost,
+        meta: err?.meta,
         message: err?.message || "Unknown database error",
       });
 
@@ -367,6 +377,8 @@ export async function syncGoogleUser(
         return {
           allowed: false,
           errorCode: "DATABASE_SCHEMA_ERROR",
+          prismaCode: code,
+          failedStep: step,
           reason: "Database schema is out of sync with Prisma models.",
         };
       }
@@ -375,6 +387,8 @@ export async function syncGoogleUser(
         return {
           allowed: false,
           errorCode: "DATABASE_UNAVAILABLE",
+          prismaCode: code,
+          failedStep: step,
           reason: "Database connection failed during Google sign-in.",
         };
       }
@@ -382,6 +396,8 @@ export async function syncGoogleUser(
       return {
         allowed: false,
         errorCode: "OAUTH_SYNC_ERROR",
+        prismaCode: code,
+        failedStep: step,
         reason: "Failed to sync Google account with database.",
       };
     }

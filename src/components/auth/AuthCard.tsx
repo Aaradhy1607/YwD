@@ -68,8 +68,16 @@ export function AuthCard({
       .catch(() => setGoogleStatus(false));
 
     if (typeof window !== "undefined") {
-      const errorParam = new URLSearchParams(window.location.search).get("error");
+      const params = new URLSearchParams(window.location.search);
+      const errorParam = params.get("error");
       if (errorParam) {
+        const prismaCode = params.get("code");
+        const failedStep = params.get("step");
+        const schemaDetail =
+          prismaCode || failedStep
+            ? ` (${[prismaCode, failedStep].filter(Boolean).join(" at ")})`
+            : "";
+
         const errorMap: Record<string, string> = {
           AccessDenied:
             "Google sign-in could not be completed (access denied). Please ensure you granted permission or sign in with email.",
@@ -83,7 +91,7 @@ export function AuthCard({
           DatabaseUnavailable:
             "Sign-in is temporarily unavailable because the database connection could not be established.",
           DatabaseSchemaError:
-            "Database schema is out of sync with the application. Please run prisma db push on the production database.",
+            `Database schema is out of sync with the application${schemaDetail}. Please run prisma db push on the production database.`,
           GoogleEmailMissing:
             "Google did not provide an email address for this account. Please use Email sign-in.",
           GoogleEmailUnverified:

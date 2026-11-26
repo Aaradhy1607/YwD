@@ -41,6 +41,13 @@ export function AuthPageContent() {
 
     const errorParam = searchParams.get("error");
     if (errorParam) {
+      const prismaCode = searchParams.get("code");
+      const failedStep = searchParams.get("step");
+      const schemaDetail =
+        prismaCode || failedStep
+          ? ` (${[prismaCode, failedStep].filter(Boolean).join(" at ")})`
+          : "";
+
       const errorMap: Record<string, string> = {
         AccessDenied:
           "Google sign-in could not be completed (access denied). Please ensure you granted permission or use email.",
@@ -54,7 +61,7 @@ export function AuthPageContent() {
         DatabaseUnavailable:
           "Sign-in is temporarily unavailable because the database connection could not be established.",
         DatabaseSchemaError:
-          "Database schema is out of sync with the application. Please run prisma db push on the production database.",
+          `Database schema is out of sync with the application${schemaDetail}. Please run prisma db push on the production database.`,
         GoogleEmailMissing:
           "Google did not provide an email address for this account. Please use email.",
         GoogleEmailUnverified:
