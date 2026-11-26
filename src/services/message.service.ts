@@ -1,3 +1,4 @@
+
 import { store } from "./store";
 import { prisma } from "@/lib/prisma";
 
@@ -7,14 +8,14 @@ export async function getConversationMessages(userId: string, counterpartyId?: s
     try {
       const where: any = counterpartyId
         ? {
-            OR: [
-              { senderId: userId, receiverId: counterpartyId },
-              { senderId: counterpartyId, receiverId: userId },
-            ],
-          }
+          OR: [
+            { senderId: userId, receiverId: counterpartyId },
+            { senderId: counterpartyId, receiverId: userId },
+          ],
+        }
         : {
-            OR: [{ senderId: userId }, { receiverId: userId }],
-          };
+          OR: [{ senderId: userId }, { receiverId: userId }],
+        };
 
       const messages = await prisma.relayMessage.findMany({
         where,

@@ -5,15 +5,22 @@ import { prisma } from "./prisma";
 import { store } from "@/services/store";
 import { generateAnonymousAlias, getRandomAvatarColor } from "./privacy";
 import { verifyPassword, checkRateLimit, logAuditEvent } from "./security";
+import { syncGoogleUser } from "./google-auth";
 
 const isGoogleConfigured = Boolean(
   process.env.AUTH_GOOGLE_ID &&
   process.env.AUTH_GOOGLE_SECRET &&
   !process.env.AUTH_GOOGLE_ID.includes("placeholder") &&
-  !process.env.AUTH_GOOGLE_SECRET.includes("placeholder")
+  !process.env.AUTH_GOOGLE_SECRET.includes("placeholder") &&
+  !process.env.AUTH_GOOGLE_ID.includes("your-google")
 );
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  trustHost: true,
+  pages: {
+    signIn: "/login",
+    error: "/login",
+  },
   providers: [
     ...(isGoogleConfigured
       ? [
@@ -174,6 +181,38 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
+    async signIn({ user, account, profile }) {
+      if (account?.provider === "google") {
+        const result = await syncGoogleUser(
+          {
+            email: user.email || (profile as any)?.email,
+            name: user.name || (profile as any)?.name,
+            image: user.image || (profile as any)?.picture,
+            emailVerified: (profile as any)?.email_verified,
+          },
+          {
+            provider: account.provider,
+            providerAccountId: account.providerAccountId,
+            type: account.type,
+            refresh_token: account.refresh_token,
+            access_token: account.access_token,
+            expires_at: account.expires_at,
+            token_type: account.token_type,
+            scope: account.scope,
+            id_token: account.id_token,
+            session_state: account.session_state,
+          }
+        );
+
+        if (!result.allowed || !result.userId) {
+          return false;
+        }
+
+        // Bind YwD database user.id so jwt() stores it in token.sub
+        user.id = result.userId;
+      }
+      return true;
+    },
     async session({ session, token }) {
       if (session.user) {
         const userId = (token.sub as string) || "usr_default_demo";
