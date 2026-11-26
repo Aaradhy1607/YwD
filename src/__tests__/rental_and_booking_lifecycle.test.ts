@@ -173,14 +173,14 @@ describe("Rental & Booking Lifecycle Engine", () => {
   });
 
   it("handles legacy unassigned rental ownership and backfills to actual renter", async () => {
-    // Add legacy unassigned rental to store
-    const legacyId = "LEGACY_RENTAL_001";
+    // Add legacy unassigned rental to store with unique ID
+    const legacyId = `LEGACY_RENTAL_${Date.now()}`;
     store.updateDB((db: any) => {
       if (!db.rentals) db.rentals = [];
       db.rentals.push({
         id: legacyId,
         productId: testProductId,
-        studentName: "Siddharth Rao", // User usr_default_demo in store
+        studentName: "TechGear Vendor", // Verified user usr_vendor_1 in store
         rentPaise: 50000,
         depositPaise: 800000,
         totalPaise: 850000,
@@ -193,14 +193,14 @@ describe("Rental & Booking Lifecycle Engine", () => {
     const legacyRecord = (db.rentals || []).find((r: any) => r.id === legacyId);
     expect(legacyRecord).toBeDefined();
 
-    // Verify backfill logic assigns it to matched user from store.users
+    // Verify backfill logic assigns it to matched verified user from store.users
     const matchedUser = (db.users || []).find(
-      (u: any) => u.name && u.name === legacyRecord.studentName
+      (u: any) => u.name && u.name === legacyRecord.studentName && u.id !== "usr_default_demo"
     );
     if (matchedUser) {
       legacyRecord.userId = matchedUser.id;
     }
-    expect(legacyRecord.userId).toBe("usr_default_demo");
+    expect(legacyRecord.userId).toBe("usr_vendor_1");
   });
 });
 

@@ -11,8 +11,13 @@ async function ensureUserIdColumn(): Promise<boolean> {
   if (hasCheckedUserIdColumn) return true;
   try {
     await (prisma as any).$executeRawUnsafe(
-      'ALTER TABLE "rentals" ADD COLUMN IF NOT EXISTS "user_id" TEXT DEFAULT \'usr_default_demo\';'
+      'ALTER TABLE "rentals" ADD COLUMN IF NOT EXISTS "user_id" TEXT;'
     );
+    try {
+      await (prisma as any).$executeRawUnsafe(
+        'ALTER TABLE "rentals" ALTER COLUMN "user_id" DROP DEFAULT;'
+      );
+    } catch {}
     try {
       await (prisma as any).$executeRawUnsafe(
         'CREATE INDEX IF NOT EXISTS "rentals_user_id_idx" ON "rentals"("user_id");'
@@ -27,6 +32,7 @@ async function ensureUserIdColumn(): Promise<boolean> {
 
 async function backfillLegacyRentals(): Promise<void> {
   try {
+    // 1. Backfill legacy PostgreSQL rentals matching users by name to verified owner IDs
     await (prisma as any).$executeRawUnsafe(`
       UPDATE "rentals" r
       SET "user_id" = u."id"
@@ -34,7 +40,15 @@ async function backfillLegacyRentals(): Promise<void> {
       WHERE (r."user_id" = 'usr_default_demo' OR r."user_id" IS NULL)
         AND u."name" IS NOT NULL
         AND r."student_name" = u."name"
-        AND r."student_name" != 'Student (Demo)'
+        AND u."id" != 'usr_default_demo'
+    `);
+
+    // 2. Disassociate unverified legacy rentals from shared demo identity
+    await (prisma as any).$executeRawUnsafe(`
+      UPDATE "rentals"
+      SET "user_id" = NULL
+      WHERE "user_id" = 'usr_default_demo'
+        AND "student_name" != 'Student (Demo)'
     `);
   } catch {}
 }
@@ -46,7 +60,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.warn("[POST /api/rentals] Session warning:", err);
   }
-  const userId = session?.user?.id || (process.env.NODE_ENV !== "production" ? "usr_default_demo" : null);
+  const userId = session?.user?.id;
   if (!userId) {
     return NextResponse.json({ error: "Authentication required. Please sign in to rent." }, { status: 401 });
   }
@@ -266,7 +280,7 @@ export async function GET() {
   } catch (err) {
     console.warn("[GET /api/rentals] Session warning:", err);
   }
-  const userId = session?.user?.id || (process.env.NODE_ENV !== "production" ? "usr_default_demo" : null);
+  const userId = session?.user?.id;
   if (!userId) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
@@ -278,7 +292,7 @@ export async function GET() {
       await ensureUserIdColumn();
       await backfillLegacyRentals();
 
-      if (session?.user?.name && session.user.name !== "Student (Demo)") {
+      if (session?.user?.name && session.user.name !== "Student (Demo)" && userId !== "usr_default_demo") {
         try {
           await (prisma as any).rental.updateMany({
             where: {
@@ -292,13 +306,8 @@ export async function GET() {
 
       let rentals: any[] = [];
       try {
-        const whereClause =
-          userId === "usr_default_demo"
-            ? { userId: "usr_default_demo", studentName: "Student (Demo)" }
-            : { userId };
-
         rentals = await (prisma as any).rental.findMany({
-          where: whereClause,
+          where: { userId },
           include: {
             product: { select: { title: true } },
             ledgerEntries: true,
@@ -352,18 +361,18 @@ export async function GET() {
   // Handle records without userId or assigned to shared demo in fallback store before applying owner filter
   let dbModified = false;
   for (const r of db.rentals) {
-    if (!r.userId || (r.userId === "usr_default_demo" && r.studentName !== "Student (Demo)")) {
+    if (!r.userId || r.userId === "usr_default_demo") {
       const matched = (db.users || []).find(
-        (u: any) => u.name && u.name === r.studentName && u.name !== "Student (Demo)"
+        (u: any) => u.name && u.name === r.studentName && u.id !== "usr_default_demo"
       );
       if (matched) {
         r.userId = matched.id;
         dbModified = true;
-      } else if (session?.user?.name && r.studentName === session.user.name) {
+      } else if (session?.user?.name && r.studentName === session.user.name && userId !== "usr_default_demo") {
         r.userId = userId;
         dbModified = true;
-      } else if (!r.userId) {
-        r.userId = "usr_default_demo";
+      } else if (r.userId === "usr_default_demo" && r.studentName !== "Student (Demo)") {
+        delete r.userId;
         dbModified = true;
       }
     }
@@ -372,11 +381,6 @@ export async function GET() {
     store.updateDB(() => {});
   }
 
-  const rentals = (db.rentals || []).filter((r: any) => {
-    if (userId === "usr_default_demo") {
-      return r.userId === "usr_default_demo" && r.studentName === "Student (Demo)";
-    }
-    return r.userId === userId;
-  });
+  const rentals = (db.rentals || []).filter((r: any) => r.userId === userId);
   return NextResponse.json({ rentals });
 }

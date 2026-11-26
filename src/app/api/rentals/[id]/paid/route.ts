@@ -9,7 +9,7 @@ export async function POST(
 ) {
   const { id } = await params;
   const session = await auth();
-  const userId = session?.user?.id || (process.env.NODE_ENV !== "production" ? "usr_default_demo" : null);
+  const userId = session?.user?.id;
   if (!userId) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
@@ -37,12 +37,9 @@ export async function POST(
 
       if (!rental) return NextResponse.json({ error: "Rental not found" }, { status: 404 });
 
-      // Backfill legacy PostgreSQL rental before ownership check if assigned to shared demo or missing
+      // Backfill legacy PostgreSQL rental to verified owner before ownership check
       if (!rental.userId || rental.userId === "usr_default_demo") {
-        if (
-          (session?.user?.name && rental.studentName === session.user.name) ||
-          (userId === "usr_default_demo" && rental.studentName === "Student (Demo)")
-        ) {
+        if (session?.user?.name && rental.studentName === session.user.name && userId !== "usr_default_demo") {
           rental.userId = userId;
           try {
             await (prisma as any).rental.update({
@@ -52,7 +49,7 @@ export async function POST(
           } catch {}
         } else {
           const matched = await prisma.user.findFirst({
-            where: { name: rental.studentName },
+            where: { name: rental.studentName, NOT: { id: "usr_default_demo" } },
           });
           if (matched) {
             rental.userId = matched.id;
@@ -66,7 +63,7 @@ export async function POST(
         }
       }
 
-      if (rental.userId !== userId) {
+      if (!rental.userId || rental.userId !== userId) {
         return NextResponse.json({ error: "Forbidden: You do not own this rental" }, { status: 403 });
       }
       if (rental.status !== "CREATED") {
@@ -95,10 +92,7 @@ export async function POST(
 
   // Handle records without userId or assigned to shared demo in fallback store before ownership check
   if (!rental.userId || rental.userId === "usr_default_demo") {
-    if (
-      (session?.user?.name && rental.studentName === session.user.name) ||
-      (userId === "usr_default_demo" && rental.studentName === "Student (Demo)")
-    ) {
+    if (session?.user?.name && rental.studentName === session.user.name && userId !== "usr_default_demo") {
       rental.userId = userId;
       store.updateDB((currentDb: any) => {
         const target = (currentDb.rentals || []).find((r: any) => r.id === id);
@@ -106,7 +100,7 @@ export async function POST(
       });
     } else {
       const matched = (db.users || []).find(
-        (u: any) => u.name && u.name === rental.studentName && u.name !== "Student (Demo)"
+        (u: any) => u.name && u.name === rental.studentName && u.id !== "usr_default_demo"
       );
       if (matched) {
         rental.userId = matched.id;
@@ -118,7 +112,7 @@ export async function POST(
     }
   }
 
-  if (rental.userId !== userId) {
+  if (!rental.userId || rental.userId !== userId) {
     return NextResponse.json({ error: "Forbidden: You do not own this rental" }, { status: 403 });
   }
   if (rental.status !== "CREATED") {
