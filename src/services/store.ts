@@ -247,10 +247,34 @@ class StoreManager {
   }
 
   public getDB(): DevDB {
+    if (process.env.NODE_ENV !== "production") {
+      try {
+        if (fs.existsSync(DEV_DB_FILE)) {
+          const raw = fs.readFileSync(DEV_DB_FILE, "utf-8");
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.products)) {
+            this.memoryDB = parsed;
+          }
+        }
+      } catch (e) {
+        // Retain memoryDB if file is being written to
+      }
+    }
     return this.memoryDB;
   }
 
   public updateDB(updater: (db: DevDB) => void): DevDB {
+    if (process.env.NODE_ENV !== "production") {
+      try {
+        if (fs.existsSync(DEV_DB_FILE)) {
+          const raw = fs.readFileSync(DEV_DB_FILE, "utf-8");
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.products)) {
+            this.memoryDB = parsed;
+          }
+        }
+      } catch (e) {}
+    }
     updater(this.memoryDB);
     this.saveDevDB(this.memoryDB);
     return this.memoryDB;

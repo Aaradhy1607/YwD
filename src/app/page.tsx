@@ -152,6 +152,14 @@ export default function YwDApp() {
           }
           if (data.user?.id) {
             setCurrentUserId(data.user.id);
+            fetch("/api/products")
+              .then((res) => res.json())
+              .then((prodData) => {
+                if (prodData.products && Array.isArray(prodData.products)) {
+                  setAllProducts(prodData.products);
+                }
+              })
+              .catch(() => {});
           }
         }
       })
