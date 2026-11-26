@@ -53,6 +53,10 @@ export function AuthPageContent() {
           "Google sign-in succeeded, but syncing your account failed. Please try again or contact support.",
         DatabaseUnavailable:
           "Sign-in is temporarily unavailable because the database connection could not be established.",
+        DatabaseSchemaError:
+          "Database schema is out of sync with the application. Please run prisma db push on the production database.",
+        GoogleEmailMissing:
+          "Google did not provide an email address for this account. Please use email.",
         GoogleEmailUnverified:
           "Your Google account email is not verified. Please verify it in Google or use email.",
       };

@@ -127,7 +127,7 @@ describe("Google OAuth User Sync & Account Linking", () => {
     expect(result).toEqual({ allowed: true, userId: "usr_google_notif_fail" });
   });
 
-  it("returns OAUTH_SYNC_ERROR when Postgres throws during sync instead of throwing uncaught", async () => {
+  it("returns OAUTH_SYNC_ERROR when Postgres throws an unknown error during sync", async () => {
     mockAccountFindUnique.mockRejectedValueOnce(new Error("Connection terminated"));
 
     const result = await syncGoogleUser(
@@ -145,6 +145,93 @@ describe("Google OAuth User Sync & Account Linking", () => {
 
     expect(result.allowed).toBe(false);
     expect(result.errorCode).toBe("OAUTH_SYNC_ERROR");
+  });
+
+  it("retries user creation on P2002 alias collision and succeeds", async () => {
+    mockAccountFindUnique.mockResolvedValue(null);
+    mockUserFindUnique.mockResolvedValue(null);
+    mockUserCreate
+      .mockRejectedValueOnce({ code: "P2002", meta: { target: ["alias"] } })
+      .mockResolvedValueOnce({
+        id: "usr_google_retry_ok",
+        email: "aliascollision@university.edu",
+        name: "Retry User",
+        role: "USER",
+        anonymousProfile: { alias: "EcoRenter-7777" },
+      });
+
+    const result = await syncGoogleUser(
+      {
+        email: "aliascollision@university.edu",
+        name: "Retry User",
+        emailVerified: true,
+      },
+      {
+        provider: "google",
+        providerAccountId: "google-sub-alias",
+        type: "oidc",
+      }
+    );
+
+    expect(result).toEqual({ allowed: true, userId: "usr_google_retry_ok" });
+    expect(mockUserCreate).toHaveBeenCalledTimes(2);
+  });
+
+  it("recovers from P2002 email race condition by linking existing user", async () => {
+    mockAccountFindUnique.mockResolvedValue(null);
+    mockUserFindUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: "usr_raced_existing",
+        email: "raced@university.edu",
+        name: "Raced User",
+        image: null,
+        emailVerified: new Date(),
+        anonymousProfile: { id: "prof_raced", alias: "LoopPeer-1010" },
+      });
+    mockUserCreate.mockRejectedValueOnce({ code: "P2002", meta: { target: ["email"] } });
+
+    const result = await syncGoogleUser(
+      {
+        email: "raced@university.edu",
+        name: "Raced User",
+        emailVerified: true,
+      },
+      {
+        provider: "google",
+        providerAccountId: "google-sub-raced",
+        type: "oidc",
+      }
+    );
+
+    expect(result).toEqual({ allowed: true, userId: "usr_raced_existing" });
+    expect(mockAccountCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns DATABASE_SCHEMA_ERROR on P2021 missing table and DATABASE_UNAVAILABLE on P1001", async () => {
+    mockAccountFindUnique.mockRejectedValueOnce({
+      code: "P2021",
+      message: "The table `public.accounts` does not exist",
+    });
+
+    const schemaErr = await syncGoogleUser(
+      { email: "schema@university.edu", emailVerified: true },
+      { provider: "google", providerAccountId: "g-schema" }
+    );
+    expect(schemaErr.allowed).toBe(false);
+    expect(schemaErr.errorCode).toBe("DATABASE_SCHEMA_ERROR");
+
+    mockAccountFindUnique.mockRejectedValueOnce({
+      code: "P1001",
+      message: "Can't reach database server",
+    });
+
+    const connErr = await syncGoogleUser(
+      { email: "conn@university.edu", emailVerified: true },
+      { provider: "google", providerAccountId: "g-conn" }
+    );
+    expect(connErr.allowed).toBe(false);
+    expect(connErr.errorCode).toBe("DATABASE_UNAVAILABLE");
   });
 
   it("creates a new User, AnonymousProfile, Account, and Notification for a first-time Google user", async () => {

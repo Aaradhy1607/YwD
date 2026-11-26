@@ -27,6 +27,7 @@ export type GoogleSyncErrorCode =
   | "MISSING_EMAIL"
   | "EMAIL_UNVERIFIED"
   | "DATABASE_UNAVAILABLE"
+  | "DATABASE_SCHEMA_ERROR"
   | "OAUTH_SYNC_ERROR";
 
 export interface SyncGoogleUserResult {
@@ -38,6 +39,49 @@ export interface SyncGoogleUserResult {
 
 const DEFAULT_CAMPUS_HUB = "North Campus Central Hub • Block B";
 const DEFAULT_BIO = "Active verified renter & circular recommerce participant.";
+
+const PRISMA_UNAVAILABLE_CODES = new Set(["P1001", "P1002", "P1008", "P1017"]);
+const PRISMA_SCHEMA_CODES = new Set(["P2021", "P2022"]);
+
+function normalizeExpiresAt(value: number | null | undefined): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  const intVal = Math.floor(value);
+  return intVal > 0 && intVal <= 2147483647 ? intVal : null;
+}
+
+function getUniqueTargets(err: any): string[] {
+  const target = err?.meta?.target;
+  if (Array.isArray(target)) return target.map(String);
+  if (typeof target === "string") return [target];
+  return [];
+}
+
+async function createAnonymousProfileWithRetry(userId: string): Promise<void> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await prisma.anonymousProfile.create({
+        data: {
+          userId,
+          alias: generateAnonymousAlias(),
+          avatarColor: getRandomAvatarColor(),
+          bio: DEFAULT_BIO,
+          trustScore: 99.0,
+          completedRentals: 0,
+          isVerified: true,
+          campusHub: DEFAULT_CAMPUS_HUB,
+        },
+      });
+      return;
+    } catch (err: any) {
+      if (err?.code === "P2002") {
+        const targets = getUniqueTargets(err);
+        if (targets.includes("userId")) return;
+        if (targets.includes("alias") && attempt < 2) continue;
+      }
+      throw err;
+    }
+  }
+}
 
 /**
  * Resolves, links, or provisions a YwD user for a Google OAuth sign-in.
@@ -83,6 +127,11 @@ export async function syncGoogleUser(
   const isPg = await store.checkPostgres();
 
   if (isPg) {
+    let step = "findAccount";
+    const expiresAt = normalizeExpiresAt(account.expires_at);
+    const sessionState =
+      typeof account.session_state === "string" ? account.session_state : null;
+
     try {
       // 1. Returning Google user: look up by (provider, providerAccountId)
       const existingAccount = await prisma.account.findUnique({
@@ -102,20 +151,20 @@ export async function syncGoogleUser(
       if (existingAccount?.user) {
         const dbUser = existingAccount.user;
 
-        // Refresh OAuth tokens on the linked Account record
+        step = "updateAccount";
         await prisma.account.update({
           where: { id: existingAccount.id },
           data: {
             refresh_token: account.refresh_token ?? existingAccount.refresh_token,
             access_token: account.access_token ?? existingAccount.access_token,
-            expires_at: account.expires_at ?? existingAccount.expires_at,
+            expires_at: expiresAt ?? existingAccount.expires_at,
             token_type: account.token_type ?? existingAccount.token_type,
             scope: account.scope ?? existingAccount.scope,
             id_token: account.id_token ?? existingAccount.id_token,
           },
         });
 
-        // Backfill missing user fields & anonymous profile if needed
+        step = "updateReturningUser";
         const userUpdates: Record<string, any> = {};
         if (!dbUser.emailVerified) userUpdates.emailVerified = new Date();
         if (!dbUser.image && profile.image) userUpdates.image = profile.image;
@@ -129,18 +178,8 @@ export async function syncGoogleUser(
         }
 
         if (!dbUser.anonymousProfile) {
-          await prisma.anonymousProfile.create({
-            data: {
-              userId: dbUser.id,
-              alias: generateAnonymousAlias(),
-              avatarColor: getRandomAvatarColor(),
-              bio: DEFAULT_BIO,
-              trustScore: 99.0,
-              completedRentals: 0,
-              isVerified: true,
-              campusHub: DEFAULT_CAMPUS_HUB,
-            },
-          });
+          step = "backfillProfile";
+          await createAnonymousProfileWithRetry(dbUser.id);
         }
 
         try {
@@ -148,7 +187,7 @@ export async function syncGoogleUser(
             userId: dbUser.id,
             action: "USER_LOGIN_SUCCESS",
             resource: "auth",
-            metadata: { email: dbUser.email, provider: "google" },
+            metadata: { provider: "google" },
           });
         } catch {}
 
@@ -156,27 +195,28 @@ export async function syncGoogleUser(
       }
 
       // 2. Existing user by verified email (e.g., registered via email/password): link Google account
+      step = "findUserByEmail";
       let dbUser = await prisma.user.findUnique({
         where: { email },
         include: { anonymousProfile: true },
       });
 
-      if (dbUser) {
+      const linkAccountToUser = async (targetUser: any) => {
+        step = "linkAccount";
         try {
           await prisma.account.create({
             data: {
-              userId: dbUser.id,
+              userId: targetUser.id,
               type: account.type || "oauth",
               provider: account.provider,
               providerAccountId: account.providerAccountId,
               refresh_token: account.refresh_token ?? null,
               access_token: account.access_token ?? null,
-              expires_at: account.expires_at ?? null,
+              expires_at: expiresAt,
               token_type: account.token_type ?? null,
               scope: account.scope ?? null,
               id_token: account.id_token ?? null,
-              session_state:
-                typeof account.session_state === "string" ? account.session_state : null,
+              session_state: sessionState,
             },
           });
         } catch (linkErr: any) {
@@ -185,98 +225,122 @@ export async function syncGoogleUser(
           }
         }
 
+        step = "updateLinkedUser";
         const userUpdates: Record<string, any> = {};
-        if (!dbUser.emailVerified) userUpdates.emailVerified = new Date();
-        if (!dbUser.image && profile.image) userUpdates.image = profile.image;
-        if (!dbUser.name && profile.name) userUpdates.name = profile.name;
+        if (!targetUser.emailVerified) userUpdates.emailVerified = new Date();
+        if (!targetUser.image && profile.image) userUpdates.image = profile.image;
+        if (!targetUser.name && profile.name) userUpdates.name = profile.name;
 
         if (Object.keys(userUpdates).length > 0) {
           await prisma.user.update({
-            where: { id: dbUser.id },
+            where: { id: targetUser.id },
             data: userUpdates,
           });
         }
 
-        if (!dbUser.anonymousProfile) {
-          await prisma.anonymousProfile.create({
-            data: {
-              userId: dbUser.id,
-              alias: generateAnonymousAlias(),
-              avatarColor: getRandomAvatarColor(),
-              bio: DEFAULT_BIO,
-              trustScore: 99.0,
-              completedRentals: 0,
-              isVerified: true,
-              campusHub: DEFAULT_CAMPUS_HUB,
-            },
-          });
+        if (!targetUser.anonymousProfile) {
+          step = "backfillLinkedProfile";
+          await createAnonymousProfileWithRetry(targetUser.id);
         }
 
         try {
           await logAuditEvent({
-            userId: dbUser.id,
+            userId: targetUser.id,
             action: "USER_LOGIN_SUCCESS",
             resource: "auth",
-            metadata: { email: dbUser.email, provider: "google", linkedExisting: true },
+            metadata: { provider: "google", linkedExisting: true },
           });
         } catch {}
 
-        return { allowed: true, userId: dbUser.id };
+        return { allowed: true, userId: targetUser.id } as SyncGoogleUserResult;
+      };
+
+      if (dbUser) {
+        return await linkAccountToUser(dbUser);
       }
 
       // 3. First-time Google user: create User, AnonymousProfile, Account, and welcome notification
-      const alias = generateAnonymousAlias();
-      const avatarColor = getRandomAvatarColor();
+      step = "createUser";
+      let createdAlias = generateAnonymousAlias();
+      for (let attempt = 0; attempt < 3; attempt++) {
+        createdAlias = generateAnonymousAlias();
+        const avatarColor = getRandomAvatarColor();
+        try {
+          dbUser = await prisma.user.create({
+            data: {
+              name: profile.name || "Verified Member",
+              email,
+              image: profile.image || null,
+              emailVerified: new Date(),
+              role: "USER",
+              anonymousProfile: {
+                create: {
+                  alias: createdAlias,
+                  avatarColor,
+                  bio: DEFAULT_BIO,
+                  trustScore: 99.0,
+                  completedRentals: 0,
+                  isVerified: true,
+                  campusHub: DEFAULT_CAMPUS_HUB,
+                },
+              },
+              accounts: {
+                create: {
+                  type: account.type || "oauth",
+                  provider: account.provider,
+                  providerAccountId: account.providerAccountId,
+                  refresh_token: account.refresh_token ?? null,
+                  access_token: account.access_token ?? null,
+                  expires_at: expiresAt,
+                  token_type: account.token_type ?? null,
+                  scope: account.scope ?? null,
+                  id_token: account.id_token ?? null,
+                  session_state: sessionState,
+                },
+              },
+            },
+            include: { anonymousProfile: true },
+          });
+          break;
+        } catch (createErr: any) {
+          if (createErr?.code === "P2002") {
+            const targets = getUniqueTargets(createErr);
+            if (targets.includes("email")) {
+              const racedUser = await prisma.user.findUnique({
+                where: { email },
+                include: { anonymousProfile: true },
+              });
+              if (racedUser) {
+                return await linkAccountToUser(racedUser);
+              }
+            }
+            if (targets.includes("alias") && attempt < 2) {
+              continue;
+            }
+          }
+          throw createErr;
+        }
+      }
 
-      dbUser = await prisma.user.create({
-        data: {
-          name: profile.name || "Verified Member",
-          email,
-          image: profile.image || null,
-          emailVerified: new Date(),
-          role: "USER",
-          anonymousProfile: {
-            create: {
-              alias,
-              avatarColor,
-              bio: DEFAULT_BIO,
-              trustScore: 99.0,
-              completedRentals: 0,
-              isVerified: true,
-              campusHub: DEFAULT_CAMPUS_HUB,
-            },
-          },
-          accounts: {
-            create: {
-              type: account.type || "oauth",
-              provider: account.provider,
-              providerAccountId: account.providerAccountId,
-              refresh_token: account.refresh_token ?? null,
-              access_token: account.access_token ?? null,
-              expires_at: account.expires_at ?? null,
-              token_type: account.token_type ?? null,
-              scope: account.scope ?? null,
-              id_token: account.id_token ?? null,
-              session_state:
-                typeof account.session_state === "string" ? account.session_state : null,
-            },
-          },
-        },
-        include: { anonymousProfile: true },
-      });
+      if (!dbUser) {
+        throw new Error("Failed to provision user record after retries.");
+      }
 
       try {
         await prisma.notification.create({
           data: {
             userId: dbUser.id,
             title: "Welcome to YwD Marketplace",
-            message: `Your anonymous identity has been provisioned as ${alias}. Your private phone & email are strictly shielded from counterparties.`,
+            message: `Your anonymous identity has been provisioned as ${createdAlias}. Your private phone & email are strictly shielded from counterparties.`,
             type: "SYSTEM",
             link: "/dashboard?tab=privacy",
           },
         });
       } catch (notifErr: any) {
-        console.warn("[Google Auth] Non-critical welcome notification failed:", notifErr?.code || notifErr?.message);
+        console.warn(
+          "[Google Auth] Non-critical welcome notification failed:",
+          notifErr?.code || notifErr?.message
+        );
       }
 
       try {
@@ -284,17 +348,37 @@ export async function syncGoogleUser(
           userId: dbUser.id,
           action: "USER_REGISTER",
           resource: "users",
-          metadata: { alias, provider: "google" },
+          metadata: { alias: createdAlias, provider: "google" },
         });
       } catch {}
 
       return { allowed: true, userId: dbUser.id };
     } catch (err: any) {
+      const code = err?.code || "UNKNOWN";
       console.error("[Google Auth] Postgres sync failed:", {
-        code: err?.code || "UNKNOWN",
+        step,
+        code,
         name: err?.name || "Error",
+        metaTarget: err?.meta?.target,
         message: err?.message || "Unknown database error",
       });
+
+      if (PRISMA_SCHEMA_CODES.has(code)) {
+        return {
+          allowed: false,
+          errorCode: "DATABASE_SCHEMA_ERROR",
+          reason: "Database schema is out of sync with Prisma models.",
+        };
+      }
+
+      if (PRISMA_UNAVAILABLE_CODES.has(code)) {
+        return {
+          allowed: false,
+          errorCode: "DATABASE_UNAVAILABLE",
+          reason: "Database connection failed during Google sign-in.",
+        };
+      }
+
       return {
         allowed: false,
         errorCode: "OAUTH_SYNC_ERROR",

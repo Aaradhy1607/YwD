@@ -196,7 +196,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
             {
               provider: account.provider,
-              providerAccountId: account.providerAccountId,
+              providerAccountId: account.providerAccountId || (profile as any)?.sub || "",
               type: account.type,
               refresh_token: account.refresh_token,
               access_token: account.access_token,
@@ -216,11 +216,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             if (result.errorCode === "EMAIL_UNVERIFIED") {
               return "/login?error=GoogleEmailUnverified";
             }
+            if (result.errorCode === "MISSING_EMAIL") {
+              return "/login?error=GoogleEmailMissing";
+            }
+            if (result.errorCode === "DATABASE_SCHEMA_ERROR") {
+              return "/login?error=DatabaseSchemaError";
+            }
             if (result.errorCode === "DATABASE_UNAVAILABLE") {
               return "/login?error=DatabaseUnavailable";
-            }
-            if (result.errorCode === "OAUTH_SYNC_ERROR" || result.errorCode === "MISSING_EMAIL") {
-              return "/login?error=OAuthSyncError";
             }
             return "/login?error=OAuthSyncError";
           }
