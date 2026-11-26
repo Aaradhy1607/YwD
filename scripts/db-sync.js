@@ -1,13 +1,31 @@
 const { execSync } = require("child_process");
 
-if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes("localhost:5432")) {
+const dbUrl = process.env.DATABASE_URL;
+
+if (dbUrl && !dbUrl.includes("localhost:5432") && !dbUrl.includes("placeholder")) {
   console.log("[db-sync] Synchronizing database schema before deployment...");
+  const env = {
+    ...process.env,
+    DIRECT_URL: process.env.DIRECT_URL || dbUrl,
+  };
+
   try {
-    execSync("npx prisma db push --skip-generate --accept-data-loss", { stdio: "inherit" });
-    console.log("[db-sync] Database schema synchronized successfully.");
-  } catch (err) {
-    console.warn("[db-sync] Warning: Automatic schema push skipped or deferred:", err.message);
+    execSync("npx prisma migrate deploy", { stdio: "inherit", env });
+    console.log("[db-sync] Prisma migrations applied successfully.");
+  } catch (migrateErr) {
+    console.warn(
+      "[db-sync] prisma migrate deploy did not complete (likely unbaselined database), falling back to non-destructive prisma db push..."
+    );
+    try {
+      execSync("npx prisma db push --skip-generate", { stdio: "inherit", env });
+      console.log("[db-sync] Database schema synchronized safely via db push.");
+    } catch (pushErr) {
+      console.warn(
+        "[db-sync] Warning: Automatic schema sync skipped or deferred:",
+        pushErr.message
+      );
+    }
   }
 } else {
-  console.log("[db-sync] No remote DATABASE_URL configured during build step. Skipping db push.");
+  console.log("[db-sync] No remote DATABASE_URL configured during build step. Skipping db sync.");
 }
