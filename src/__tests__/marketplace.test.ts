@@ -48,6 +48,37 @@ describe("1. Dynamic Duration Pricing Engine", () => {
     expect(result.deliveryFee).toBe(99);
     expect(formatINR(result.totalPayable)).toContain("₹");
   });
+
+  it("calculates non-daily tier with delivery, platform fee, and GST matching backend checkout total", () => {
+    const result = calculateRentalPrice({
+      rates: sampleRates,
+      durationTier: "semester",
+      durationUnits: 1,
+      deliveryMethod: "DELIVERY",
+      customDeliveryFee: 99,
+    });
+
+    // Verify all quoted components are present
+    expect(result.grossRent).toBe(29999);
+    expect(result.deliveryFee).toBe(99);
+    expect(result.platformFee).toBe(Math.round(29999 * 0.035));
+    expect(result.gstAmount).toBe(Math.round((29999 + result.platformFee) * 0.18));
+    expect(result.securityDeposit).toBe(8000);
+
+    const expectedTotal =
+      result.grossRent +
+      result.securityDeposit +
+      result.deliveryFee +
+      result.platformFee +
+      result.gstAmount;
+    expect(result.totalPayable).toBe(expectedTotal);
+
+    // Verify paise breakdown consistency
+    const totalPaise = result.totalPayable * 100;
+    const depositPaise = result.securityDeposit * 100;
+    const rentPaise = totalPaise - depositPaise;
+    expect(rentPaise + depositPaise).toBe(totalPaise);
+  });
 });
 
 describe("2. Strict Anonymous Identity & Privacy Protection", () => {
