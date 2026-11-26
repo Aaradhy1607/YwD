@@ -56,7 +56,18 @@ export const createProductSchema = z.object({
   deliveryAvailable: z.boolean().default(true),
   campusHub: z.string().min(1, "Campus hub or collection point is required"),
   pickupAddress: z.string().optional().nullable(),
-  images: z.array(z.string().url("Must be valid image URL")).min(1, "At least 1 product image is required"),
+  images: z
+    .array(
+      z.string().refine(
+        (val) =>
+          val.startsWith("http://") ||
+          val.startsWith("https://") ||
+          val.startsWith("/") ||
+          val.startsWith("data:"),
+        { message: "Must be a valid image URL or image path" }
+      )
+    )
+    .min(1, "At least 1 product image is required"),
   specs: z.record(z.string()).optional(),
 });
 

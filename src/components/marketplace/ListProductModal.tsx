@@ -58,12 +58,13 @@ export function ListProductModal({
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Cloudinary image file upload handler
+  // Cloudinary / Local image file upload handler
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setUploading(true);
+    setErrorMsg(null);
     const formData = new FormData();
     formData.append("file", file);
 
@@ -77,19 +78,32 @@ export function ListProductModal({
         throw new Error(data.error || "Image upload failed");
       }
       if (data.url) {
-        setImages((prev) => [...prev, data.url]);
+        setImages((prev) => {
+          // If only the default stock placeholder exists, replace it with the uploaded photo
+          if (prev.length === 1 && prev[0].includes("unsplash.com")) {
+            return [data.url];
+          }
+          return [...prev, data.url];
+        });
       }
     } catch (err: any) {
       console.error("Upload error:", err);
       setErrorMsg(err.message || "Failed to upload image");
     } finally {
       setUploading(false);
+      e.target.value = "";
     }
   };
 
   const handleAddImageUrl = () => {
-    if (newImageUrl.trim() && newImageUrl.startsWith("http")) {
-      setImages((prev) => [...prev, newImageUrl.trim()]);
+    const trimmed = newImageUrl.trim();
+    if (trimmed && (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("/"))) {
+      setImages((prev) => {
+        if (prev.length === 1 && prev[0].includes("unsplash.com")) {
+          return [trimmed];
+        }
+        return [...prev, trimmed];
+      });
       setNewImageUrl("");
     }
   };
@@ -414,15 +428,28 @@ export function ListProductModal({
                 </div>
               ))}
 
-              <label className="w-20 h-20 rounded-xl border-2 border-dashed border-[#E5DEC9] hover:border-[#18352D] flex flex-col items-center justify-center text-[#63736A] cursor-pointer transition-colors bg-[#FAF7F2]">
-                <Camera className="w-5 h-5 text-[#789681]" />
-                <span className="text-[10px] mt-1">Upload</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
+              <label
+                className={`w-20 h-20 rounded-xl border-2 border-dashed border-[#E5DEC9] hover:border-[#18352D] flex flex-col items-center justify-center text-[#63736A] cursor-pointer transition-colors bg-[#FAF7F2] ${
+                  uploading ? "opacity-60 pointer-events-none" : ""
+                }`}
+              >
+                {uploading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-[#C46A42] border-t-transparent rounded-full animate-spin" />
+                    <span className="text-[10px] mt-1 text-[#C46A42] font-medium">Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Camera className="w-5 h-5 text-[#789681]" />
+                    <span className="text-[10px] mt-1">Upload</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </>
+                )}
               </label>
             </div>
 
