@@ -73,11 +73,15 @@ export function ListProductModal({
         body: formData,
       });
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Image upload failed");
+      }
       if (data.url) {
         setImages((prev) => [...prev, data.url]);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Upload error:", err);
+      setErrorMsg(err.message || "Failed to upload image");
     } finally {
       setUploading(false);
     }

@@ -316,6 +316,16 @@ export default function YwDApp() {
     setIsChatOpen(true);
   };
 
+  // Open list product flow with auth check
+  const handleOpenListProduct = () => {
+    if (!currentUserId) {
+      setIsAuthOpen(true);
+      showToast("Authentication Required", "Please sign in or create an account to list equipment.");
+      return;
+    }
+    setIsListProductOpen(true);
+  };
+
   // Mark notification read
   const handleMarkNotifRead = (id: string) => {
     setNotifications((prev) =>
@@ -373,7 +383,7 @@ export default function YwDApp() {
         wishlistCount={wishlistIds.length}
         unreadNotifsCount={unreadNotifsCount}
         userAlias={userAlias}
-        onOpenListProduct={() => setIsListProductOpen(true)}
+        onOpenListProduct={handleOpenListProduct}
         onOpenChat={() => setIsChatOpen(true)}
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenHubModal={() => setIsHubModalOpen(true)}
@@ -410,7 +420,7 @@ export default function YwDApp() {
                   setPreferredDuration={setPreferredDuration}
                   onExplore={() => setActiveScreen("explore")}
                   onOpenProductDetail={handleOpenDetail}
-                  onOpenListProduct={() => setIsListProductOpen(true)}
+                  onOpenListProduct={handleOpenListProduct}
                   onOpenHubModal={() => setIsHubModalOpen(true)}
                   onOpenGuidedDiscovery={() => setIsGuidedDiscoveryOpen(true)}
                 />
@@ -588,18 +598,28 @@ export default function YwDApp() {
                 onOpenReturnModal={(id) => setReturnBookingId(id)}
                 onToggleListingAvailability={(id) => {
                   fetch(`/api/products/${id}`, { method: "PATCH" })
-                    .then((res) => res.json())
+                    .then(async (res) => {
+                      const data = await res.json();
+                      if (!res.ok) throw new Error(data.error || "Failed to update listing status");
+                      return data;
+                    })
                     .then((updated) => {
                       setAllProducts((prev) =>
                         prev.map((p) =>
                           p.id === id ? { ...p, isAvailable: updated.isAvailable } : p
                         )
                       );
-                      showToast("Listing status updated.");
+                      showToast(
+                        "Listing status updated",
+                        updated.isAvailable ? "Item is now active in marketplace" : "Item is paused"
+                      );
+                    })
+                    .catch((err: any) => {
+                      showToast("Error updating listing", err.message || "Failed to update status");
                     });
                 }}
                 onOpenProductDetail={handleOpenDetail}
-                onOpenListProduct={() => setIsListProductOpen(true)}
+                onOpenListProduct={handleOpenListProduct}
                 onExplore={() => setActiveScreen("explore")}
               />
             </div>
@@ -684,7 +704,9 @@ export default function YwDApp() {
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
         onAuthenticated={(user) => {
-          showToast("Signed In Successfully", `Welcome back, ${user.email}`);
+          if (user?.id) setCurrentUserId(user.id);
+          if (user?.anonymousProfile?.alias) setUserAlias(user.anonymousProfile.alias);
+          showToast("Signed In Successfully", `Welcome back, ${user.email || user.name || "Student"}`);
         }}
       />
 

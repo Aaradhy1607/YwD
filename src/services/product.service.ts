@@ -251,7 +251,8 @@ export async function createProductListing(data: any, ownerId: string) {
     try {
       const newId = `prod_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       const categories = await prisma.category.findMany();
-      const categoryId = data.categoryId || categories[0]?.id || "cat_electronics";
+      const targetCat = categories.find((c) => c.id === data.categoryId || c.slug === data.categoryId);
+      const categoryId = targetCat?.id || categories[0]?.id || "cat_electronics";
 
       const created = await prisma.product.create({
         data: {
@@ -308,7 +309,7 @@ export async function createProductListing(data: any, ownerId: string) {
   store.assertProductionDatabase();
   const newId = `prod_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const categories = store.getDB().categories;
-  const category = categories.find((c) => c.id === data.categoryId) || categories[0];
+  const category = categories.find((c) => c.id === data.categoryId || c.slug === data.categoryId) || categories[0];
 
   const userProfile =
     store.getDB().anonymousProfiles.find((ap) => ap.userId === ownerId) || {
