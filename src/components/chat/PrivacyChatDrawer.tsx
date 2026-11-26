@@ -16,7 +16,7 @@ export function PrivacyChatDrawer({
   onClose,
   targetUserId = "usr_vendor_1",
   targetAlias = "GearVault-8801",
-  currentUserId = "usr_default_demo",
+  currentUserId = "",
 }: PrivacyChatDrawerProps) {
   const [messages, setMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState("");

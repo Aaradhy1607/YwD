@@ -6,7 +6,13 @@ import { auth } from "@/lib/auth";
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
-    const userId = session?.user?.id || "usr_default_demo";
+    const userId = session?.user?.id;
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Unauthorized: Please sign in to verify handover." },
+        { status: 401 }
+      );
+    }
 
     const body = await req.json();
     const validated = pickupHandoverSchema.parse(body);

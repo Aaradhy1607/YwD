@@ -6,7 +6,7 @@ import { auth } from "@/lib/auth";
 export async function GET() {
   try {
     const session = await auth();
-    const userId = session?.user?.id || (process.env.NODE_ENV !== "production" ? "usr_default_demo" : null);
+    const userId = session?.user?.id;
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized: Authentication required." }, { status: 401 });
     }
@@ -39,7 +39,7 @@ export async function GET() {
 export async function PATCH(req: NextRequest) {
   try {
     const session = await auth();
-    const userId = session?.user?.id || (process.env.NODE_ENV !== "production" ? "usr_default_demo" : null);
+    const userId = session?.user?.id;
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized: Authentication required." }, { status: 401 });
     }

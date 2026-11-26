@@ -48,6 +48,7 @@ export default function YwDApp() {
 
   // User & Data states
   const [userAlias, setUserAlias] = useState("EcoRenter-4912");
+  const [currentUserId, setCurrentUserId] = useState<string>("");
   const [wishlistIds, setWishlistIds] = useState<string[]>(["prod_macbook_m3"]);
   const [bookings, setBookings] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
@@ -145,8 +146,13 @@ export default function YwDApp() {
     fetch("/api/auth/me")
       .then((res) => res.json())
       .then((data) => {
-        if (data.authenticated && data.user?.anonymousProfile?.alias) {
-          setUserAlias(data.user.anonymousProfile.alias);
+        if (data.authenticated && data.user) {
+          if (data.user?.anonymousProfile?.alias) {
+            setUserAlias(data.user.anonymousProfile.alias);
+          }
+          if (data.user?.id) {
+            setCurrentUserId(data.user.id);
+          }
         }
       })
       .catch(() => {});
@@ -323,7 +329,7 @@ export default function YwDApp() {
   };
 
   const unreadNotifsCount = notifications.filter((n) => !n.isRead).length;
-  const myListings = allProducts.filter((p) => p.ownerId === "usr_default_demo");
+  const myListings = allProducts.filter((p) => currentUserId ? p.ownerId === currentUserId : false);
   const wishlistItems = allProducts
     .filter((p) => wishlistIds.includes(p.id))
     .map((p) => ({ id: `w_${p.id}`, productId: p.id, product: p }));
@@ -670,7 +676,7 @@ export default function YwDApp() {
         onClose={() => setIsChatOpen(false)}
         targetUserId={chatTarget.id}
         targetAlias={chatTarget.alias}
-        currentUserId="usr_default_demo"
+        currentUserId={currentUserId}
       />
 
       {/* Auth Modal */}

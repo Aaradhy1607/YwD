@@ -37,7 +37,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
-    const userId = session?.user?.id || "usr_default_demo"; // Default authenticated user
+    const userId = session?.user?.id;
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Unauthorized: Please sign in to list a product." },
+        { status: 401 }
+      );
+    }
 
     const body = await req.json();
     const validated = createProductSchema.parse(body);
