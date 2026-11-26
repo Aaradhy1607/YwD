@@ -8,7 +8,7 @@ import { logAuditEvent } from "@/lib/security";
 export async function GET(req: NextRequest) {
   try {
     const session = await auth();
-    const userId = session?.user?.id || (process.env.NODE_ENV !== "production" ? "usr_default_demo" : null);
+    const userId = session?.user?.id;
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized: Authentication required." }, { status: 401 });
     }
@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
-    const userId = session?.user?.id || (process.env.NODE_ENV !== "production" ? "usr_default_demo" : null);
+    const userId = session?.user?.id;
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized: Please sign in to file a dispute." }, { status: 401 });
     }

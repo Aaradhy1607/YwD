@@ -3,33 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { store } from "@/services/store";
 import { logAuditEvent } from "@/lib/security";
-
-/**
- * Server-side Admin Authorization Gate
- */
-async function assertAdminSession() {
-  const session = await auth();
-  if (!session || !session.user) {
-    return { authorized: false, status: 401, error: "Authentication required" };
-  }
-
-  const userId = session.user.id;
-  let role = (session.user as any).role;
-
-  const isPg = await store.checkPostgres();
-  if (isPg && userId) {
-    try {
-      const user = await prisma.user.findUnique({ where: { id: userId } });
-      if (user) role = user.role;
-    } catch { }
-  }
-
-  if (role !== "ADMIN") {
-    return { authorized: false, status: 403, error: "Access Denied: Administrator role required" };
-  }
-
-  return { authorized: true, user: session.user };
-}
+import { assertAdminSession } from "@/lib/adminGuard";
 
 export async function GET() {
   const gate = await assertAdminSession();

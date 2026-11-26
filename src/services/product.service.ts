@@ -119,11 +119,18 @@ export async function getProducts(params: ProductFilterParams = {}) {
         });
       });
 
+      // Synchronize with local store so locally listed items are never missing on refresh
+      const localProducts = store.getDB().products || [];
+      const pgIds = new Set(products.map((p) => p.id));
+      const localOnly = localProducts.filter((lp) => !pgIds.has(lp.id));
+
+      const merged = [...localOnly.map((p) => sanitizeProductForPublic(p)), ...products];
+
       return {
-        products,
-        total,
+        products: merged,
+        total: total + localOnly.length,
         page,
-        totalPages: Math.ceil(total / limit) || 1,
+        totalPages: Math.ceil((total + localOnly.length) / limit) || 1,
       };
     } catch (e) {
       console.warn("[Product Service] Postgres query failed, evaluating store fallback:", e);
@@ -247,11 +254,14 @@ export async function getProductById(id: string) {
 
 export async function createProductListing(data: any, ownerId: string) {
   const isPg = await store.checkPostgres();
+  let createdProduct: any = null;
+
   if (isPg) {
     try {
       const newId = `prod_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       const categories = await prisma.category.findMany();
-      const categoryId = data.categoryId || categories[0]?.id || "cat_electronics";
+      const targetCat = categories.find((c) => c.id === data.categoryId || c.slug === data.categoryId);
+      const categoryId = targetCat?.id || categories[0]?.id || "cat_electronics";
 
       const created = await prisma.product.create({
         data: {
@@ -295,7 +305,7 @@ export async function createProductListing(data: any, ownerId: string) {
         },
       });
 
-      return sanitizeProductForPublic({
+      createdProduct = sanitizeProductForPublic({
         ...created,
         categorySlug: created.category?.slug,
         subcategorySlug: created.subcategory?.slug,
@@ -305,10 +315,11 @@ export async function createProductListing(data: any, ownerId: string) {
     }
   }
 
+  // Dual-persistence guarantee: always persist in store so item is never lost across reloads
   store.assertProductionDatabase();
-  const newId = `prod_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const newId = createdProduct?.id || `prod_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const categories = store.getDB().categories;
-  const category = categories.find((c) => c.id === data.categoryId) || categories[0];
+  const category = categories.find((c) => c.id === data.categoryId || c.slug === data.categoryId) || categories[0];
 
   const userProfile =
     store.getDB().anonymousProfiles.find((ap) => ap.userId === ownerId) || {
@@ -319,7 +330,7 @@ export async function createProductListing(data: any, ownerId: string) {
       campusHub: data.campusHub || "Central Verified Locker • Hub A",
     };
 
-  const newProduct = {
+  const storeProduct = {
     id: newId,
     title: data.title,
     description: data.description,
@@ -368,10 +379,15 @@ export async function createProductListing(data: any, ownerId: string) {
   };
 
   store.updateDB((db) => {
-    db.products.unshift(newProduct);
+    const existingIdx = db.products.findIndex((p) => p.id === newId);
+    if (existingIdx >= 0) {
+      db.products[existingIdx] = storeProduct;
+    } else {
+      db.products.unshift(storeProduct);
+    }
   });
 
-  return sanitizeProductForPublic(newProduct);
+  return createdProduct || sanitizeProductForPublic(storeProduct);
 }
 
 export async function getUserListings(userId: string) {

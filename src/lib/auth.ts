@@ -244,8 +244,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return true;
     },
     async session({ session, token }) {
-      if (session.user) {
-        const userId = (token.sub as string) || "usr_default_demo";
+      if (session.user && token.sub) {
+        const userId = token.sub as string;
         session.user.id = userId;
 
         let dbUser: any = null;
@@ -268,14 +268,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // Attach anonymous public identity (strips PII from client)
         const profile =
           dbUser?.anonymousProfile ||
-          store.getDB().anonymousProfiles.find((p) => p.userId === userId) || {
-            alias: "EcoRenter-4912",
-            avatarColor: "#18352D",
-            trustScore: 99.2,
-            completedRentals: 19,
-            isVerified: true,
-            campusHub: "Central Verified Locker • Hub A",
-          };
+          store.getDB().anonymousProfiles.find((p) => p.userId === userId) || null;
 
         (session.user as any).anonymousProfile = profile;
       }

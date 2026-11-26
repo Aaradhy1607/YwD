@@ -35,7 +35,10 @@ export async function PATCH(
   try {
     const { id } = await params;
     const session = await auth();
-    const userId = session?.user?.id || "usr_default_demo";
+    const userId = session?.user?.id;
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized: Authentication required." }, { status: 401 });
+    }
 
     const updated = await toggleProductAvailability(id, userId);
     if (!updated) {
@@ -58,7 +61,10 @@ export async function PUT(
   try {
     const { id } = await params;
     const session = await auth();
-    const userId = session?.user?.id || "usr_default_demo";
+    const userId = session?.user?.id;
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized: Authentication required." }, { status: 401 });
+    }
 
     const body = await req.json();
     const updated = await updateProductListing(id, body, userId);
@@ -79,7 +85,10 @@ export async function DELETE(
   try {
     const { id } = await params;
     const session = await auth();
-    const userId = session?.user?.id || "usr_default_demo";
+    const userId = session?.user?.id;
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized: Authentication required." }, { status: 401 });
+    }
 
     const result = await deleteProductListing(id, userId);
     return NextResponse.json(result);
