@@ -360,12 +360,11 @@ export async function createProductListing(data: any, ownerId: string) {
       url,
       isPrimary: i === 0,
     })),
-    conditionPhotos: data.images && data.images.length >= 4 ? data.images.slice(0, 4) : [
-      data.images?.[0] || "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=600&q=80",
-      data.images?.[0] || "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=600&q=80",
-      data.images?.[0] || "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=600&q=80",
-      data.images?.[0] || "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=600&q=80",
-    ],
+    conditionPhotos: data.images && data.images.length >= 4
+      ? data.images.slice(0, 4)
+      : data.images?.[0]
+      ? [data.images[0], data.images[0], data.images[0], data.images[0]]
+      : [],
     specs: data.specs || {},
     owner: {
       alias: userProfile.alias,

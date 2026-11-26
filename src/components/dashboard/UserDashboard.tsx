@@ -671,15 +671,21 @@ export function UserDashboard({
                   className="bg-[#FFFFFF] rounded-2xl border border-[#E5DEC9] p-4 flex gap-4 items-center justify-between"
                 >
                   <div className="flex items-center gap-3.5">
-                    <img
-                      src={
-                        listing.images?.[0]?.url ||
-                        (Array.isArray(listing.images) && listing.images[0]) ||
-                        "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=400&q=80"
-                      }
-                      alt={listing.title}
-                      className="w-16 h-16 rounded-xl object-cover border border-[#E5DEC9]"
-                    />
+                    {(listing.images?.[0]?.url ||
+                      (Array.isArray(listing.images) && typeof listing.images[0] === "string" && listing.images[0])) ? (
+                      <img
+                        src={
+                          listing.images?.[0]?.url ||
+                          (Array.isArray(listing.images) && listing.images[0])
+                        }
+                        alt={listing.title}
+                        className="w-16 h-16 rounded-xl object-cover border border-[#E5DEC9]"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-xl bg-[#FAF7F2] border border-[#E5DEC9] flex items-center justify-center shrink-0">
+                        <Package className="w-5 h-5 text-[#9BB5A3]" />
+                      </div>
+                    )}
                     <div>
                       <h3 className="font-semibold text-xs sm:text-sm text-[#18352D] line-clamp-1">
                         {listing.title}
@@ -798,16 +804,24 @@ export function UserDashboard({
                   onClick={() => onOpenProductDetail(item.productId)}
                   className="bg-[#FFFFFF] rounded-2xl border border-[#E5DEC9] p-4 flex gap-3.5 items-center cursor-pointer hover:border-[#18352D]/40 transition-colors group"
                 >
-                  <img
-                    src={
-                      item.product?.images?.[0]?.url ||
-                      (Array.isArray(item.product?.images) &&
-                        item.product?.images[0]) ||
-                      "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=400&q=80"
-                    }
-                    alt={item.product?.title || "Product"}
-                    className="w-16 h-16 rounded-xl object-cover border border-[#E5DEC9]"
-                  />
+                  {(item.product?.images?.[0]?.url ||
+                    (Array.isArray(item.product?.images) &&
+                      typeof item.product?.images[0] === "string" &&
+                      item.product?.images[0])) ? (
+                    <img
+                      src={
+                        item.product?.images?.[0]?.url ||
+                        (Array.isArray(item.product?.images) &&
+                          item.product?.images[0])
+                      }
+                      alt={item.product?.title || "Product"}
+                      className="w-16 h-16 rounded-xl object-cover border border-[#E5DEC9]"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-xl bg-[#FAF7F2] border border-[#E5DEC9] flex items-center justify-center shrink-0">
+                      <Package className="w-5 h-5 text-[#9BB5A3]" />
+                    </div>
+                  )}
                   <div className="min-w-0">
                     <h3 className="font-semibold text-xs sm:text-sm text-[#18352D] group-hover:text-[#C46A42] transition-colors line-clamp-1">
                       {item.product?.title}

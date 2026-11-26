@@ -19,6 +19,7 @@ import {
   Info,
 } from "lucide-react";
 import { calculateRentalPrice, DurationTier, formatINR } from "@/lib/pricing";
+import { extractImageUrls } from "@/lib/image-utils";
 import { UpiCheckoutModal } from "@/components/marketplace/UpiCheckoutModal";
 
 interface ProductDetailModalProps {
@@ -47,6 +48,7 @@ export function ProductDetailModal({
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
+  const [activeImgError, setActiveImgError] = useState(false);
   const [mode, setMode] = useState<"rent" | "buy">(initialMode);
   const [durationTier, setDurationTier] = useState<DurationTier>(initialDuration as DurationTier);
   const [durationUnits, setDurationUnits] = useState(1);
@@ -79,6 +81,8 @@ export function ProductDetailModal({
   useEffect(() => {
     if (!productId) return;
     setLoading(true);
+    setActiveImageIdx(0);
+    setActiveImgError(false);
     fetch(`/api/products/${productId}`)
       .then((res) => res.json())
       .then((data) => {
@@ -226,9 +230,13 @@ export function ProductDetailModal({
     }
   };
 
-  const images = product?.images?.map((i: any) => (typeof i === "string" ? i : i.url)) || [];
-  if (images.length === 0 && product?.conditionPhotos) {
-    images.push(...product.conditionPhotos);
+  const images = extractImageUrls(product);
+  if (images.length === 0 && Array.isArray(product?.conditionPhotos)) {
+    images.push(
+      ...product.conditionPhotos.filter(
+        (u: any): u is string => typeof u === "string" && u.trim().length > 0
+      )
+    );
   }
 
   return (
@@ -295,12 +303,22 @@ export function ProductDetailModal({
             <div className="lg:col-span-7 space-y-6">
               {/* Primary Image View */}
               <div className="relative h-72 sm:h-96 bg-[#EAE2D5] rounded-2xl overflow-hidden border border-[#E5DEC9]">
-                <img
-                  src={images[activeImageIdx] || images[0]}
-                  alt={product.title}
-                  decoding="async"
-                  className="w-full h-full object-cover"
-                />
+                {images[activeImageIdx] && !activeImgError ? (
+                  <img
+                    src={images[activeImageIdx]}
+                    alt={product.title}
+                    decoding="async"
+                    onError={() => setActiveImgError(true)}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-[#63736A] gap-2 p-6 text-center">
+                    <Package className="w-9 h-9 text-[#9BB5A3]" />
+                    <span className="text-xs font-medium">
+                      {activeImgError ? "Image could not be loaded" : "No photo provided"}
+                    </span>
+                  </div>
+                )}
                 <div className="absolute top-3 left-3 flex gap-2">
                   <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#FAF7F2]/95 text-[#18352D] border border-[#E5DEC9]">
                     {product.conditionGrade || "Mint Grade"}
@@ -319,7 +337,10 @@ export function ProductDetailModal({
                       <button
                         key={i}
                         type="button"
-                        onClick={() => setActiveImageIdx(i)}
+                        onClick={() => {
+                          setActiveImageIdx(i);
+                          setActiveImgError(false);
+                        }}
                         className={`h-20 rounded-xl overflow-hidden border transition-all ${
                           activeImageIdx === i
                             ? "border-[#18352D] ring-1 ring-[#18352D]"

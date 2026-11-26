@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Heart, MapPin, ArrowRight } from "lucide-react";
+import { Heart, MapPin, ArrowRight, Package } from "lucide-react";
 import { formatINR } from "@/lib/pricing";
+import { extractImageUrls } from "@/lib/image-utils";
 
 interface ProductCardProps {
   product: any;
@@ -22,6 +23,8 @@ export function ProductCard({
   onOpenDetail,
 }: ProductCardProps) {
   const [selectedTier, setSelectedTier] = useState(durationTier);
+  const [primaryImgError, setPrimaryImgError] = useState(false);
+  const [secondaryImgError, setSecondaryImgError] = useState(false);
 
   useEffect(() => {
     setSelectedTier(durationTier);
@@ -32,22 +35,23 @@ export function ProductCard({
     onToggleWishlist(product.id);
   };
 
-  const images = Array.isArray(product.images)
-    ? product.images.map((img: any) => (typeof img === "string" ? img : img?.url))
-    : [];
+  const images = extractImageUrls(product);
 
   const conditionPhotos = Array.isArray(product.conditionPhotos)
     ? product.conditionPhotos.map((img: any) => (typeof img === "string" ? img : img?.url))
     : [];
 
-  const primaryImage =
-    images[0] ||
-    "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=800&q=80";
+  const primaryImage = images[0] || null;
 
   const secondaryImage =
     images[1] ||
     conditionPhotos.find((url: string) => url && url !== primaryImage) ||
     null;
+
+  useEffect(() => {
+    setPrimaryImgError(false);
+    setSecondaryImgError(false);
+  }, [primaryImage, secondaryImage]);
 
   const getDisplayRate = (tier: string) => {
     switch (tier) {
@@ -111,22 +115,33 @@ export function ProductCard({
           featured ? "sm:col-span-6 aspect-[4/3] sm:aspect-auto sm:min-h-[260px]" : "aspect-[4/3]"
         }`}
       >
-        <img
-          src={primaryImage}
-          alt={product.title}
-          loading="lazy"
-          decoding="async"
-          className={`w-full h-full object-cover object-center transition-all duration-500 ease-out group-hover:scale-[1.03] ${
-            secondaryImage ? "group-hover:opacity-0" : ""
-          }`}
-        />
+        {primaryImage && !primaryImgError ? (
+          <img
+            src={primaryImage}
+            alt={product.title}
+            loading="lazy"
+            decoding="async"
+            onError={() => setPrimaryImgError(true)}
+            className={`w-full h-full object-cover object-center transition-all duration-500 ease-out group-hover:scale-[1.03] ${
+              secondaryImage && !secondaryImgError ? "group-hover:opacity-0" : ""
+            }`}
+          />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center text-[#63736A] gap-1.5 p-4 text-center">
+            <Package className="w-7 h-7 text-[#9BB5A3]" />
+            <span className="text-[11px] font-medium">
+              {primaryImgError ? "Image unavailable" : "No photo provided"}
+            </span>
+          </div>
+        )}
 
-        {secondaryImage && (
+        {secondaryImage && !secondaryImgError && (
           <img
             src={secondaryImage}
             alt={`${product.title} alternate angle`}
             loading="lazy"
             decoding="async"
+            onError={() => setSecondaryImgError(true)}
             className="absolute inset-0 w-full h-full object-cover object-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-out"
           />
         )}

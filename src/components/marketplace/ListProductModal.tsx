@@ -11,7 +11,9 @@ import {
   Camera,
   CheckCircle2,
   Lock,
+  AlertCircle,
 } from "lucide-react";
+import { validateImageUrl } from "@/lib/image-utils";
 
 interface ListProductModalProps {
   categories: any[];
@@ -42,12 +44,15 @@ export function ListProductModal({
   const [pickupAvailable, setPickupAvailable] = useState(true);
   const [deliveryAvailable, setDeliveryAvailable] = useState(true);
 
-  // Images list
-  const [images, setImages] = useState<string[]>([
-    "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1000&q=80",
-  ]);
+  // Images list (empty by default — never pre-filled with a preset photo)
+  const [images, setImages] = useState<string[]>([]);
+  const [imageStatuses, setImageStatuses] = useState<
+    Record<string, "loading" | "loaded" | "error">
+  >({});
   const [newImageUrl, setNewImageUrl] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [uploadSuccessMsg, setUploadSuccessMsg] = useState<string | null>(null);
 
   // Specifications
   const [specList, setSpecList] = useState<{ key: string; value: string }[]>([
@@ -58,44 +63,103 @@ export function ListProductModal({
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Cloudinary image file upload handler
+  // Cloudinary image file upload handler (supports multiple files & safe retry)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
+    setImageError(null);
+    setUploadSuccessMsg(null);
     setUploading(true);
-    const formData = new FormData();
-    formData.append("file", file);
+
+    const validTypes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+    let uploadedCount = 0;
 
     try {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Image upload failed");
+      for (const file of files) {
+        if (!validTypes.includes(file.type)) {
+          setImageError(
+            `"${file.name}" is not a supported format. Use JPEG, PNG, WEBP, or AVIF.`
+          );
+          continue;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+          setImageError(`"${file.name}" exceeds the 5MB upload limit.`);
+          continue;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data?.url) {
+          setImageError(
+            data?.error ||
+              "Failed to upload image. Please retry or paste a direct HTTPS image URL."
+          );
+          continue;
+        }
+
+        const uploadedUrl: string = data.url;
+        setImages((prev) => (prev.includes(uploadedUrl) ? prev : [...prev, uploadedUrl]));
+        setImageStatuses((prev) => ({ ...prev, [uploadedUrl]: "loading" }));
+        uploadedCount += 1;
       }
-      if (data.url) {
-        setImages((prev) => [...prev, data.url]);
+
+      if (uploadedCount > 0) {
+        setUploadSuccessMsg(
+          uploadedCount === 1
+            ? "Photo uploaded successfully."
+            : `${uploadedCount} photos uploaded successfully.`
+        );
       }
     } catch (err: any) {
-      console.error("Upload error:", err);
-      setErrorMsg(err.message || "Failed to upload image");
+      setImageError(
+        err?.message ||
+          "Network error while uploading image. You can retry without losing your form."
+      );
     } finally {
       setUploading(false);
+      e.target.value = "";
     }
   };
 
   const handleAddImageUrl = () => {
-    if (newImageUrl.trim() && newImageUrl.startsWith("http")) {
-      setImages((prev) => [...prev, newImageUrl.trim()]);
-      setNewImageUrl("");
+    setImageError(null);
+    setUploadSuccessMsg(null);
+
+    const validation = validateImageUrl(newImageUrl);
+    if (!validation.valid) {
+      setImageError(validation.error);
+      return;
     }
+
+    if (images.includes(validation.url)) {
+      setImageError("This image URL has already been added.");
+      return;
+    }
+
+    setImages((prev) => [...prev, validation.url]);
+    setImageStatuses((prev) => ({ ...prev, [validation.url]: "loading" }));
+    setNewImageUrl("");
   };
 
   const handleRemoveImage = (idx: number) => {
+    const removedUrl = images[idx];
     setImages((prev) => prev.filter((_, i) => i !== idx));
+    if (removedUrl) {
+      setImageStatuses((prev) => {
+        const next = { ...prev };
+        delete next[removedUrl];
+        return next;
+      });
+    }
+    setImageError(null);
   };
 
   const handleAddSpec = () => {
@@ -113,7 +177,14 @@ export function ListProductModal({
 
     try {
       if (images.length === 0) {
-        throw new Error("Please add at least one product image.");
+        throw new Error("Please upload a photo or add at least one direct image URL.");
+      }
+
+      const validImages = images.filter((url) => imageStatuses[url] !== "error");
+      if (validImages.length === 0) {
+        throw new Error(
+          "None of the added image URLs could be loaded. Remove broken links and add a valid direct image URL or upload a photo."
+        );
       }
 
       const specsObj: Record<string, string> = {};
@@ -142,7 +213,7 @@ export function ListProductModal({
         pickupAddress,
         pickupAvailable,
         deliveryAvailable,
-        images,
+        images: validImages,
         specs: specsObj,
       };
 
@@ -401,36 +472,125 @@ export function ListProductModal({
             </label>
 
             <div className="flex flex-wrap gap-2.5 items-center">
-              {images.map((url, idx) => (
-                <div key={idx} className="relative w-20 h-20 rounded-xl overflow-hidden border border-[#E5DEC9] group">
-                  <img src={url} alt={`Listing upload ${idx + 1}`} className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveImage(idx)}
-                    className="absolute inset-0 bg-[#202522]/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+              {images.length === 0 && (
+                <div className="h-20 px-4 rounded-xl border border-[#E5DEC9] bg-[#FAF7F2] flex items-center gap-2 text-[#63736A] text-[11px]">
+                  <Package className="w-4 h-4 text-[#9BB5A3] shrink-0" />
+                  <span>No photos added yet. Upload a photo or paste a direct image URL below.</span>
                 </div>
-              ))}
+              )}
 
-              <label className="w-20 h-20 rounded-xl border-2 border-dashed border-[#E5DEC9] hover:border-[#18352D] flex flex-col items-center justify-center text-[#63736A] cursor-pointer transition-colors bg-[#FAF7F2]">
-                <Camera className="w-5 h-5 text-[#789681]" />
-                <span className="text-[10px] mt-1">Upload</span>
+              {images.map((url, idx) => {
+                const status = imageStatuses[url] || "loading";
+                return (
+                  <div
+                    key={url}
+                    className={`relative w-20 h-20 rounded-xl overflow-hidden border bg-[#FAF7F2] group ${
+                      status === "error" ? "border-rose-300 bg-rose-50" : "border-[#E5DEC9]"
+                    }`}
+                  >
+                    {status === "error" ? (
+                      <div className="w-full h-full flex flex-col items-center justify-center p-1.5 text-center text-rose-700">
+                        <AlertCircle className="w-4 h-4 mb-0.5 shrink-0" />
+                        <span className="text-[9px] font-semibold leading-tight">
+                          Failed to load
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        {status === "loading" && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-[#FAF7F2]">
+                            <span className="w-4 h-4 border-2 border-[#18352D]/25 border-t-[#18352D] rounded-full animate-spin" />
+                          </div>
+                        )}
+                        <img
+                          src={url}
+                          alt={`Listing upload ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                          onLoad={() =>
+                            setImageStatuses((prev) => ({ ...prev, [url]: "loaded" }))
+                          }
+                          onError={() => {
+                            setImageStatuses((prev) => ({ ...prev, [url]: "error" }));
+                            setImageError(
+                              "One or more image URLs could not be loaded as an image. Make sure it is a direct image link (not a webpage) and is publicly accessible."
+                            );
+                          }}
+                        />
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(idx)}
+                      aria-label={`Remove image ${idx + 1}`}
+                      className="absolute inset-0 bg-[#202522]/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                );
+              })}
+
+              <label
+                className={`w-20 h-20 rounded-xl border-2 border-dashed border-[#E5DEC9] hover:border-[#18352D] flex flex-col items-center justify-center text-[#63736A] cursor-pointer transition-colors bg-[#FAF7F2] ${
+                  uploading ? "opacity-60 pointer-events-none" : ""
+                }`}
+              >
+                {uploading ? (
+                  <>
+                    <span className="w-5 h-5 border-2 border-[#18352D]/25 border-t-[#18352D] rounded-full animate-spin" />
+                    <span className="text-[10px] mt-1">Uploading</span>
+                  </>
+                ) : (
+                  <>
+                    <Camera className="w-5 h-5 text-[#789681]" />
+                    <span className="text-[10px] mt-1">Upload</span>
+                  </>
+                )}
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp,image/avif"
+                  multiple
+                  disabled={uploading}
                   onChange={handleFileUpload}
                   className="hidden"
                 />
               </label>
             </div>
 
+            {imageError && (
+              <div
+                role="alert"
+                className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-medium flex items-start gap-2"
+              >
+                <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>{imageError}</span>
+              </div>
+            )}
+
+            {uploadSuccessMsg && !imageError && (
+              <div
+                role="status"
+                className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-medium flex items-center gap-2"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                <span>{uploadSuccessMsg}</span>
+              </div>
+            )}
+
             <div className="flex gap-2 pt-1">
               <input
-                type="text"
+                type="url"
                 value={newImageUrl}
-                onChange={(e) => setNewImageUrl(e.target.value)}
+                onChange={(e) => {
+                  setNewImageUrl(e.target.value);
+                  if (imageError) setImageError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddImageUrl();
+                  }
+                }}
                 placeholder="Or paste direct image URL (https://...)"
                 className="flex-1 p-2.5 rounded-xl bg-[#FAF7F2] border border-[#E5DEC9] text-xs text-[#18352D] focus:outline-none focus:border-[#18352D]"
               />

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { uploadToCloudinary } from "@/lib/cloudinary";
+import { uploadToCloudinary, CloudinaryNotConfiguredError } from "@/lib/cloudinary";
 import { auth } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
@@ -13,10 +13,14 @@ export async function POST(req: NextRequest) {
     }
 
     const formData = await req.formData();
-    const file = formData.get("file") as File;
+    const file = formData.get("file") as File | null;
 
-    if (!file) {
+    if (!file || typeof file.arrayBuffer !== "function") {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+    }
+
+    if (file.size === 0) {
+      return NextResponse.json({ error: "Uploaded file is empty" }, { status: 400 });
     }
 
     // Validate size (max 5MB)
@@ -44,9 +48,19 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(uploaded);
   } catch (error: any) {
-    console.error("[Upload Error]:", error);
+    if (error instanceof CloudinaryNotConfiguredError || error?.code === "CLOUDINARY_NOT_CONFIGURED") {
+      return NextResponse.json(
+        { error: error.message, code: "CLOUDINARY_NOT_CONFIGURED" },
+        { status: 503 }
+      );
+    }
+
+    console.error("[Upload Error]:", {
+      name: error?.name || "Error",
+      message: error?.message || "Failed to upload image",
+    });
     return NextResponse.json(
-      { error: error.message || "Failed to upload image" },
+      { error: error?.message || "Failed to upload image" },
       { status: 500 }
     );
   }
