@@ -137,18 +137,13 @@ const MODES: StepOption[] = [
 const TIMELINES: StepOption[] = [
   {
     id: "daily",
-    label: "Daily Sprint (1–3 Days)",
+    label: "Per Day Sprint (1–3 Days)",
     description: "Exact day-by-day access for short shoots, presentations, and events.",
   },
   {
     id: "weekly",
-    label: "Weekly Sprint (7 Days)",
+    label: "Per Week Project Cycle (7 Days)",
     description: "Standard academic project cycle. Popular for hackathons and assignments.",
-  },
-  {
-    id: "monthly",
-    label: "Monthly Residency (30 Days)",
-    description: "Extended creative project or internship period with tiered rates.",
   },
   {
     id: "semester",
@@ -213,14 +208,11 @@ export function GuidedDiscoveryModal({
   const calculateProductRate = (p: any) => {
     if (!p) return 0;
     switch (selectedTimeline) {
-      case "daily":
-        return p.rentalPriceDaily;
       case "weekly":
         return p.rentalPriceWeekly;
-      case "monthly":
-        return p.rentalPriceMonthly || Math.round(p.rentalPriceWeekly * 3.4);
       case "semester":
         return p.rentalPriceSemester || Math.round(p.rentalPriceWeekly * 8.5);
+      case "daily":
       default:
         return p.rentalPriceDaily;
     }

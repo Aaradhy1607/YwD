@@ -30,8 +30,6 @@ export function ListProductModal({
   const [conditionGrade, setConditionGrade] = useState("Mint (Like New)");
   const [rentalPriceDaily, setRentalPriceDaily] = useState("299");
   const [rentalPriceWeekly, setRentalPriceWeekly] = useState("1299");
-  const [rentalPriceHourly, setRentalPriceHourly] = useState("60");
-  const [rentalPriceMonthly, setRentalPriceMonthly] = useState("3999");
   const [rentalPriceSemester, setRentalPriceSemester] = useState("8999");
   const [deposit, setDeposit] = useState("2500");
   const [mrpReference, setMrpReference] = useState("24999");
@@ -144,8 +142,8 @@ export function ListProductModal({
         conditionGrade,
         rentalPriceDaily: parseFloat(rentalPriceDaily),
         rentalPriceWeekly: parseFloat(rentalPriceWeekly),
-        rentalPriceHourly: rentalPriceHourly ? parseFloat(rentalPriceHourly) : null,
-        rentalPriceMonthly: rentalPriceMonthly ? parseFloat(rentalPriceMonthly) : null,
+        rentalPriceHourly: null,
+        rentalPriceMonthly: null,
         rentalPriceSemester: rentalPriceSemester ? parseFloat(rentalPriceSemester) : null,
         mrpReference: parseFloat(mrpReference),
         deposit: parseFloat(deposit),
@@ -280,16 +278,16 @@ export function ListProductModal({
             </div>
           </div>
 
-          {/* Tiered Rental Pricing & Security Deposit */}
+          {/* Rental Duration Rates & Escrow Deposit */}
           <div className="bg-[#FAF7F2] p-5 rounded-2xl border border-[#E5DEC9] space-y-4">
             <h4 className="font-semibold text-xs text-[#18352D] uppercase tracking-wider">
-              Transparent Duration Rates & Escrow Deposit
+              Rental Duration Rates & Escrow Deposit
             </h4>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="text-[11px] font-medium text-[#63736A] block mb-1">
-                  Daily Rate (₹) *
+                  Per Day Rate (₹) *
                 </label>
                 <input
                   type="number"
@@ -302,7 +300,7 @@ export function ListProductModal({
 
               <div>
                 <label className="text-[11px] font-medium text-[#63736A] block mb-1">
-                  Weekly Rate (₹) *
+                  Per Week Rate (₹) *
                 </label>
                 <input
                   type="number"
@@ -315,40 +313,19 @@ export function ListProductModal({
 
               <div>
                 <label className="text-[11px] font-medium text-[#63736A] block mb-1">
-                  Hourly Rate (₹)
-                </label>
-                <input
-                  type="number"
-                  value={rentalPriceHourly}
-                  onChange={(e) => setRentalPriceHourly(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-medium text-[#63736A] block mb-1">
-                  Monthly Rate (₹)
-                </label>
-                <input
-                  type="number"
-                  value={rentalPriceMonthly}
-                  onChange={(e) => setRentalPriceMonthly(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-medium text-[#63736A] block mb-1">
                   Semester Rate (₹)
                 </label>
                 <input
                   type="number"
                   value={rentalPriceSemester}
                   onChange={(e) => setRentalPriceSemester(e.target.value)}
+                  placeholder="e.g. 8999"
                   className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
                 />
               </div>
+            </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
               <div>
                 <label className="text-[11px] font-medium text-[#63736A] block mb-1">
                   Escrow Deposit (₹) *
@@ -361,9 +338,7 @@ export function ListProductModal({
                   className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
                 />
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
               <div>
                 <label className="text-[11px] font-medium text-[#63736A] block mb-1">
                   Original Retail MRP Reference (₹) *
@@ -376,8 +351,10 @@ export function ListProductModal({
                   className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
                 />
               </div>
+            </div>
 
-              <div className="flex items-center gap-3 pt-4">
+            <div className="pt-2 border-t border-[#E5DEC9]">
+              <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
                   id="purchasableCheck"
@@ -386,26 +363,26 @@ export function ListProductModal({
                   className="w-4 h-4 text-[#C46A42] rounded border-[#E5DEC9] focus:ring-[#C46A42]"
                 />
                 <label htmlFor="purchasableCheck" className="text-xs font-semibold text-[#18352D] cursor-pointer">
-                  Enable Outright Recommerce Sale Option
+                  Enable Outright Buy Option (Recommerce Sale)
                 </label>
               </div>
-            </div>
 
-            {isPurchasable && (
-              <div>
-                <label className="text-[11px] font-medium text-[#63736A] block mb-1">
-                  Outright Buy Price (₹) *
-                </label>
-                <input
-                  type="number"
-                  required={isPurchasable}
-                  value={buyPrice}
-                  onChange={(e) => setBuyPrice(e.target.value)}
-                  placeholder="e.g. 18500"
-                  className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
-                />
-              </div>
-            )}
+              {isPurchasable && (
+                <div className="mt-3">
+                  <label className="text-[11px] font-medium text-[#63736A] block mb-1">
+                    Outright Buy Price (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    required={isPurchasable}
+                    value={buyPrice}
+                    onChange={(e) => setBuyPrice(e.target.value)}
+                    placeholder="e.g. 18500"
+                    className="w-full sm:w-1/2 p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Product Photography Section */}

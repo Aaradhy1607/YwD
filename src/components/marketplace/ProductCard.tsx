@@ -51,20 +51,10 @@ export function ProductCard({
 
   const getDisplayRate = (tier: string) => {
     switch (tier) {
-      case "hourly":
-        return {
-          rate: product.rentalPriceHourly || Math.round((product.rentalPriceDaily || 0) / 6),
-          unit: "hr",
-        };
       case "weekly":
         return {
           rate: product.rentalPriceWeekly,
           unit: "wk",
-        };
-      case "monthly":
-        return {
-          rate: product.rentalPriceMonthly || Math.round((product.rentalPriceWeekly || 0) * 3.4),
-          unit: "mo",
         };
       case "semester":
         return {

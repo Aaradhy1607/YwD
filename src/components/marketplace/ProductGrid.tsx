@@ -34,9 +34,8 @@ export function ProductGrid({
   activeCategoryName = "Featured inventory",
 }: ProductGridProps) {
   const durationOptions = [
-    { id: "daily", label: "Daily" },
-    { id: "weekly", label: "Weekly" },
-    { id: "monthly", label: "Monthly" },
+    { id: "daily", label: "Per Day" },
+    { id: "weekly", label: "Per Week" },
     { id: "semester", label: "Semester" },
   ];
 

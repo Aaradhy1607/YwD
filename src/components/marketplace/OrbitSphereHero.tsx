@@ -904,7 +904,7 @@ export function OrbitSphereHero({
 
           {/* Duration Selector Tabs */}
           <div className="hidden lg:flex items-center gap-1 p-1 rounded-full bg-current/5 text-[11px] font-mono">
-            {(["hourly", "daily", "weekly", "semester"] as const).map((d) => (
+            {(["daily", "weekly", "semester"] as const).map((d) => (
               <button
                 key={d}
                 type="button"
@@ -920,7 +920,7 @@ export function OrbitSphereHero({
                     : "opacity-60 hover:opacity-100"
                 }`}
               >
-                {d}
+                {d === "daily" ? "Per Day" : d === "weekly" ? "Per Week" : "Semester"}
               </button>
             ))}
           </div>

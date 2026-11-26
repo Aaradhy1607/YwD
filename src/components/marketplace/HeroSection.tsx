@@ -115,12 +115,8 @@ export function HeroSection({
   const getRateForDuration = (item: any, tier: string) => {
     if (!item) return 0;
     switch (tier) {
-      case "hourly":
-        return item.rentalPriceHourly || Math.round((item.rentalPriceDaily || 0) / 6);
       case "weekly":
         return item.rentalPriceWeekly || 0;
-      case "monthly":
-        return item.rentalPriceMonthly || Math.round((item.rentalPriceWeekly || 0) * 3.4);
       case "semester":
         return item.rentalPriceSemester || Math.round((item.rentalPriceWeekly || 0) * 8.5);
       case "daily":
@@ -138,9 +134,8 @@ export function HeroSection({
     "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1200&q=85";
 
   const durationTiers = [
-    { id: "daily", label: "Daily" },
-    { id: "weekly", label: "Weekly" },
-    { id: "monthly", label: "Monthly" },
+    { id: "daily", label: "Per Day" },
+    { id: "weekly", label: "Per Week" },
     { id: "semester", label: "Semester" },
   ];
 

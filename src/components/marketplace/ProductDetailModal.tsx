@@ -118,10 +118,8 @@ export function ProductDetailModal({
   if (!productId) return null;
 
   const durationTiers: { id: DurationTier; label: string; days: number }[] = [
-    { id: "hourly", label: "Hourly", days: 0.25 },
-    { id: "daily", label: "Daily", days: 1 },
-    { id: "weekly", label: "Weekly", days: 7 },
-    { id: "monthly", label: "Monthly", days: 30 },
+    { id: "daily", label: "Per Day", days: 1 },
+    { id: "weekly", label: "Per Week", days: 7 },
     { id: "semester", label: "Semester", days: 120 },
   ];
 

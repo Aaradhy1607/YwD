@@ -33,7 +33,7 @@ const features = [
   },
   {
     title: "Flexible rental terms",
-    description: "Choose hourly, daily, weekly, monthly or semester-long access based on what you need.",
+    description: "Choose per day, per week, or semester-long access, or purchase outright.",
     icon: Clock3,
   },
 ];

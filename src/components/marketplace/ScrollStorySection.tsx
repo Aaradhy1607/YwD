@@ -46,7 +46,7 @@ const CHAPTERS: StoryChapter[] = [
       title: "Apple MacBook Pro M3 Workstation",
       specs: ["M3 Pro 11-core CPU, 18GB RAM", "512GB Ultra-Fast SSD storage", "Liquid Retina XDR calibrated display"],
       stat: "₹699/day",
-      statLabel: "Weekly, monthly and semester tiered rates",
+      statLabel: "Per day, per week and semester tiered rates",
     },
   },
   {
