@@ -30,6 +30,7 @@ export function ListProductModal({
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState(categories[0]?.id || "");
   const [conditionGrade, setConditionGrade] = useState("Mint (Like New)");
+  const [listingType, setListingType] = useState<"rent" | "sell" | "both" | null>(null);
   const [rentalPriceDaily, setRentalPriceDaily] = useState("299");
   const [rentalPriceWeekly, setRentalPriceWeekly] = useState("1299");
   const [rentalPriceHourly, setRentalPriceHourly] = useState("60");
@@ -37,7 +38,6 @@ export function ListProductModal({
   const [rentalPriceSemester, setRentalPriceSemester] = useState("8999");
   const [deposit, setDeposit] = useState("2500");
   const [mrpReference, setMrpReference] = useState("24999");
-  const [isPurchasable, setIsPurchasable] = useState(false);
   const [buyPrice, setBuyPrice] = useState("");
   const [campusHub, setCampusHub] = useState("Central Verified Locker • Hub A");
   const [pickupAddress, setPickupAddress] = useState("");
@@ -176,6 +176,40 @@ export function ListProductModal({
     setErrorMsg(null);
 
     try {
+      if (!listingType) {
+        throw new Error("Please select what you would like to do with this item (Rent, Sell, or Both).");
+      }
+
+      const showRent = listingType === "rent" || listingType === "both";
+      const showSell = listingType === "sell" || listingType === "both";
+
+      const dailyVal = parseFloat(rentalPriceDaily);
+      const weeklyVal = parseFloat(rentalPriceWeekly);
+      const depositVal = parseFloat(deposit);
+      const mrpVal = mrpReference ? parseFloat(mrpReference) : NaN;
+      const sellVal = parseFloat(buyPrice);
+
+      if (showRent) {
+        if (Number.isNaN(dailyVal) || dailyVal < 1) {
+          throw new Error("Please enter a valid daily rental rate (minimum ₹1).");
+        }
+        if (Number.isNaN(weeklyVal) || weeklyVal < 1) {
+          throw new Error("Please enter a valid weekly rental rate (minimum ₹1).");
+        }
+        if (Number.isNaN(depositVal) || depositVal < 0) {
+          throw new Error("Please enter a valid security deposit (₹0 or more).");
+        }
+        if (Number.isNaN(mrpVal) || mrpVal < 1) {
+          throw new Error("Please enter a valid original retail MRP reference.");
+        }
+      }
+
+      if (showSell) {
+        if (Number.isNaN(sellVal) || sellVal < 1) {
+          throw new Error("Please enter a valid selling price (minimum ₹1).");
+        }
+      }
+
       if (images.length === 0) {
         throw new Error("Please upload a photo or add at least one direct image URL.");
       }
@@ -199,16 +233,17 @@ export function ListProductModal({
         description,
         categoryId: categoryId || categories[0]?.id,
         conditionGrade,
-        rentalPriceDaily: parseFloat(rentalPriceDaily),
-        rentalPriceWeekly: parseFloat(rentalPriceWeekly),
-        rentalPriceHourly: rentalPriceHourly ? parseFloat(rentalPriceHourly) : null,
-        rentalPriceMonthly: rentalPriceMonthly ? parseFloat(rentalPriceMonthly) : null,
-        rentalPriceSemester: rentalPriceSemester ? parseFloat(rentalPriceSemester) : null,
-        mrpReference: parseFloat(mrpReference),
-        deposit: parseFloat(deposit),
-        isRentable: true,
-        isPurchasable,
-        buyPrice: isPurchasable && buyPrice ? parseFloat(buyPrice) : null,
+        listingType,
+        rentalPriceDaily: showRent ? dailyVal : 0,
+        rentalPriceWeekly: showRent ? weeklyVal : 0,
+        rentalPriceHourly: showRent && rentalPriceHourly ? parseFloat(rentalPriceHourly) : null,
+        rentalPriceMonthly: showRent && rentalPriceMonthly ? parseFloat(rentalPriceMonthly) : null,
+        rentalPriceSemester: showRent && rentalPriceSemester ? parseFloat(rentalPriceSemester) : null,
+        mrpReference: !Number.isNaN(mrpVal) && mrpVal > 0 ? mrpVal : showSell ? sellVal : 0,
+        deposit: showRent ? depositVal : 0,
+        isRentable: showRent,
+        isPurchasable: showSell,
+        buyPrice: showSell ? sellVal : null,
         campusHub,
         pickupAddress,
         pickupAvailable,
@@ -337,129 +372,195 @@ export function ListProductModal({
             </div>
           </div>
 
-          {/* Tiered Rental Pricing & Security Deposit */}
+          {/* Listing Intent Selection: Rent / Sell / Both */}
           <div className="bg-[#FAF7F2] p-5 rounded-2xl border border-[#E5DEC9] space-y-4">
-            <h4 className="font-semibold text-xs text-[#18352D] uppercase tracking-wider">
-              Transparent Duration Rates & Escrow Deposit
-            </h4>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="text-[11px] font-medium text-[#63736A] block mb-1">
-                  Daily Rate (₹) *
-                </label>
-                <input
-                  type="number"
-                  required
-                  value={rentalPriceDaily}
-                  onChange={(e) => setRentalPriceDaily(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-medium text-[#63736A] block mb-1">
-                  Weekly Rate (₹) *
-                </label>
-                <input
-                  type="number"
-                  required
-                  value={rentalPriceWeekly}
-                  onChange={(e) => setRentalPriceWeekly(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-medium text-[#63736A] block mb-1">
-                  Hourly Rate (₹)
-                </label>
-                <input
-                  type="number"
-                  value={rentalPriceHourly}
-                  onChange={(e) => setRentalPriceHourly(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-medium text-[#63736A] block mb-1">
-                  Monthly Rate (₹)
-                </label>
-                <input
-                  type="number"
-                  value={rentalPriceMonthly}
-                  onChange={(e) => setRentalPriceMonthly(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-medium text-[#63736A] block mb-1">
-                  Semester Rate (₹)
-                </label>
-                <input
-                  type="number"
-                  value={rentalPriceSemester}
-                  onChange={(e) => setRentalPriceSemester(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-medium text-[#63736A] block mb-1">
-                  Escrow Deposit (₹) *
-                </label>
-                <input
-                  type="number"
-                  required
-                  value={deposit}
-                  onChange={(e) => setDeposit(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
-                />
-              </div>
+            <div>
+              <h4 className="font-semibold text-xs sm:text-sm text-[#18352D]">
+                What would you like to do with this item? *
+              </h4>
+              <p className="text-[11px] text-[#63736A] mt-0.5">
+                Choose whether peers can rent it, buy it outright, or both.
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              <div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              {[
+                {
+                  id: "rent" as const,
+                  title: "Rent",
+                  subtitle: "Earn per day/week with escrow deposit",
+                },
+                {
+                  id: "sell" as const,
+                  title: "Sell",
+                  subtitle: "Outright recommerce sale",
+                },
+                {
+                  id: "both" as const,
+                  title: "Both — Rent and Sell",
+                  subtitle: "Set rental rates & outright buy price",
+                },
+              ].map((option) => {
+                const selected = listingType === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => {
+                      setListingType(option.id);
+                      if (errorMsg) setErrorMsg(null);
+                    }}
+                    aria-pressed={selected}
+                    className={`p-3.5 rounded-xl border text-left transition-all ${
+                      selected
+                        ? "bg-[#18352D] text-white border-[#18352D] shadow-xs"
+                        : "bg-[#FFFFFF] text-[#18352D] border-[#E5DEC9] hover:border-[#18352D]/50"
+                    }`}
+                  >
+                    <span className="text-xs font-semibold block">{option.title}</span>
+                    <span
+                      className={`text-[11px] mt-0.5 block ${
+                        selected ? "text-[#D6E0D9]" : "text-[#63736A]"
+                      }`}
+                    >
+                      {option.subtitle}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {!listingType && (
+              <p className="text-[11px] text-[#C46A42] font-medium">
+                Select one of the options above to enter pricing details.
+              </p>
+            )}
+
+            {(listingType === "rent" || listingType === "both") && (
+              <div className="space-y-4 pt-2 border-t border-[#E5DEC9]">
+                <h5 className="font-semibold text-xs text-[#18352D] uppercase tracking-wider">
+                  Transparent Duration Rates & Escrow Deposit
+                </h5>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-[11px] font-medium text-[#63736A] block mb-1">
+                      Daily Rate (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      required
+                      value={rentalPriceDaily}
+                      onChange={(e) => setRentalPriceDaily(e.target.value)}
+                      className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-medium text-[#63736A] block mb-1">
+                      Weekly Rate (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      required
+                      value={rentalPriceWeekly}
+                      onChange={(e) => setRentalPriceWeekly(e.target.value)}
+                      className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-medium text-[#63736A] block mb-1">
+                      Hourly Rate (₹)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={rentalPriceHourly}
+                      onChange={(e) => setRentalPriceHourly(e.target.value)}
+                      className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-medium text-[#63736A] block mb-1">
+                      Monthly Rate (₹)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={rentalPriceMonthly}
+                      onChange={(e) => setRentalPriceMonthly(e.target.value)}
+                      className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-medium text-[#63736A] block mb-1">
+                      Semester Rate (₹)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={rentalPriceSemester}
+                      onChange={(e) => setRentalPriceSemester(e.target.value)}
+                      className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-medium text-[#63736A] block mb-1">
+                      Escrow Deposit (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      required
+                      value={deposit}
+                      onChange={(e) => setDeposit(e.target.value)}
+                      className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {(listingType === "sell" || listingType === "both") && (
+              <div className="space-y-3 pt-2 border-t border-[#E5DEC9]">
+                <h5 className="font-semibold text-xs text-[#18352D] uppercase tracking-wider">
+                  Outright Selling Price
+                </h5>
+                <div>
+                  <label className="text-[11px] font-medium text-[#63736A] block mb-1">
+                    Selling Price (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={buyPrice}
+                    onChange={(e) => setBuyPrice(e.target.value)}
+                    placeholder="e.g. 18500"
+                    className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
+                  />
+                </div>
+              </div>
+            )}
+
+            {listingType && (
+              <div className="pt-2 border-t border-[#E5DEC9]">
                 <label className="text-[11px] font-medium text-[#63736A] block mb-1">
-                  Original Retail MRP Reference (₹) *
+                  Original Retail MRP Reference (₹) {listingType !== "sell" ? "*" : "(Optional)"}
                 </label>
                 <input
                   type="number"
-                  required
+                  min={listingType !== "sell" ? "1" : "0"}
+                  required={listingType !== "sell"}
                   value={mrpReference}
                   onChange={(e) => setMrpReference(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
-                />
-              </div>
-
-              <div className="flex items-center gap-3 pt-4">
-                <input
-                  type="checkbox"
-                  id="purchasableCheck"
-                  checked={isPurchasable}
-                  onChange={(e) => setIsPurchasable(e.target.checked)}
-                  className="w-4 h-4 text-[#C46A42] rounded border-[#E5DEC9] focus:ring-[#C46A42]"
-                />
-                <label htmlFor="purchasableCheck" className="text-xs font-semibold text-[#18352D] cursor-pointer">
-                  Enable Outright Recommerce Sale Option
-                </label>
-              </div>
-            </div>
-
-            {isPurchasable && (
-              <div>
-                <label className="text-[11px] font-medium text-[#63736A] block mb-1">
-                  Outright Buy Price (₹) *
-                </label>
-                <input
-                  type="number"
-                  required={isPurchasable}
-                  value={buyPrice}
-                  onChange={(e) => setBuyPrice(e.target.value)}
-                  placeholder="e.g. 18500"
-                  className="w-full p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
+                  className="w-full sm:w-1/2 p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E5DEC9] text-xs sm:text-sm font-mono font-medium text-[#18352D] focus:outline-none focus:border-[#18352D]"
                 />
               </div>
             )}

@@ -114,6 +114,29 @@ export default function AdminDashboardPage() {
     setTimeout(() => setActionMessage(null), 4000);
   };
 
+  const handleDeleteProduct = async (id: string, title: string) => {
+    if (!window.confirm(`Permanently delete "${title}"? This cannot be undone.`)) {
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const res = await fetch("/api/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "DELETE_PRODUCT", targetId: id }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        setActionMessage("Product listing permanently deleted.");
+        fetchAdminData();
+      } else {
+        setActionMessage(`Error: ${json.error || "Failed to delete product"}`);
+      }
+    } catch {}
+    setActionLoading(false);
+    setTimeout(() => setActionMessage(null), 4000);
+  };
+
   const handleResolveDispute = async (id: string, refundDecision: string) => {
     setActionLoading(true);
     try {
@@ -436,7 +459,7 @@ export default function AdminDashboardPage() {
                           </span>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-right">
+                      <td className="py-3 px-4 text-right space-x-2">
                         <button
                           disabled={actionLoading}
                           onClick={() => handleToggleProduct(p.id)}
@@ -447,6 +470,13 @@ export default function AdminDashboardPage() {
                           }`}
                         >
                           {p.isPaused ? "Unsuspend" : "Suspend"}
+                        </button>
+                        <button
+                          disabled={actionLoading}
+                          onClick={() => handleDeleteProduct(p.id, p.title)}
+                          className="px-3 py-1 rounded text-xs font-mono bg-rose-950 hover:bg-rose-900 border border-rose-500/50 text-rose-200 transition"
+                        >
+                          Delete
                         </button>
                       </td>
                     </tr>

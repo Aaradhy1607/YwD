@@ -42,22 +42,87 @@ export const createProductSchema = z.object({
   categoryId: z.string().min(1, "Category is required"),
   subcategoryId: z.string().optional().nullable(),
   conditionGrade: z.string().min(1, "Condition grade is required"),
+  listingType: z.enum(["rent", "sell", "both"]).optional(),
   rentalPriceHourly: z.number().min(0).optional().nullable(),
-  rentalPriceDaily: z.number().min(1, "Daily rate must be at least ₹1"),
-  rentalPriceWeekly: z.number().min(1, "Weekly rate must be at least ₹1"),
+  rentalPriceDaily: z.number().min(0).optional().nullable(),
+  rentalPriceWeekly: z.number().min(0).optional().nullable(),
   rentalPriceMonthly: z.number().min(0).optional().nullable(),
   rentalPriceSemester: z.number().min(0).optional().nullable(),
   buyPrice: z.number().min(0).optional().nullable(),
-  mrpReference: z.number().min(1, "Reference MRP is required"),
-  deposit: z.number().min(0, "Security deposit must be >= 0"),
-  isRentable: z.boolean().default(true),
-  isPurchasable: z.boolean().default(false),
+  mrpReference: z.number().min(0).optional().nullable(),
+  deposit: z.number().min(0, "Security deposit must be >= 0").optional().nullable(),
+  isRentable: z.boolean().optional(),
+  isPurchasable: z.boolean().optional(),
   pickupAvailable: z.boolean().default(true),
   deliveryAvailable: z.boolean().default(true),
   campusHub: z.string().min(1, "Campus hub or collection point is required"),
   pickupAddress: z.string().optional().nullable(),
   images: z.array(z.string().url("Must be valid image URL")).min(1, "At least 1 product image is required"),
   specs: z.record(z.string()).optional(),
+}).superRefine((data, ctx) => {
+  const rentEnabled =
+    data.listingType === "rent" || data.listingType === "both"
+      ? true
+      : data.listingType === "sell"
+      ? false
+      : data.isRentable !== false;
+
+  const sellEnabled =
+    data.listingType === "sell" || data.listingType === "both"
+      ? true
+      : data.listingType === "rent"
+      ? false
+      : Boolean(data.isPurchasable);
+
+  if (!rentEnabled && !sellEnabled) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Please select Rent, Sell, or Both.",
+      path: ["listingType"],
+    });
+    return;
+  }
+
+  if (rentEnabled) {
+    if (data.rentalPriceDaily == null || Number.isNaN(data.rentalPriceDaily) || data.rentalPriceDaily < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Daily rate must be at least ₹1",
+        path: ["rentalPriceDaily"],
+      });
+    }
+    if (data.rentalPriceWeekly == null || Number.isNaN(data.rentalPriceWeekly) || data.rentalPriceWeekly < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Weekly rate must be at least ₹1",
+        path: ["rentalPriceWeekly"],
+      });
+    }
+    if (data.deposit == null || Number.isNaN(data.deposit) || data.deposit < 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Security deposit must be >= 0",
+        path: ["deposit"],
+      });
+    }
+    if (data.mrpReference == null || Number.isNaN(data.mrpReference) || data.mrpReference < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Reference MRP is required",
+        path: ["mrpReference"],
+      });
+    }
+  }
+
+  if (sellEnabled) {
+    if (data.buyPrice == null || Number.isNaN(data.buyPrice) || data.buyPrice < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Selling price must be at least ₹1",
+        path: ["buyPrice"],
+      });
+    }
+  }
 });
 
 export const createBookingSchema = z.object({

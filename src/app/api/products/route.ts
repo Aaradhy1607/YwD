@@ -1,11 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProducts, createProductListing } from "@/services/product.service";
+import { getProducts, getUserListings, createProductListing } from "@/services/product.service";
 import { createProductSchema } from "@/lib/validations";
 import { auth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
+    const mine = searchParams.get("mine") === "true";
+
+    if (mine) {
+      const session = await auth();
+      const userId = session?.user?.id;
+      if (!userId) {
+        return NextResponse.json(
+          { error: "Unauthorized: Please sign in to view your listings." },
+          { status: 401 }
+        );
+      }
+      const products = await getUserListings(userId);
+      return NextResponse.json({ products, total: products.length, page: 1, totalPages: 1 });
+    }
+
     const category = searchParams.get("category") || "all";
     const query = searchParams.get("query") || "";
     const mode = (searchParams.get("mode") as any) || "all";

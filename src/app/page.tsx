@@ -49,6 +49,7 @@ export default function YwDApp() {
   // User & Data states
   const [userAlias, setUserAlias] = useState("EcoRenter-4912");
   const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [myListings, setMyListings] = useState<any[]>([]);
   const [wishlistIds, setWishlistIds] = useState<string[]>(["prod_macbook_m3"]);
   const [bookings, setBookings] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
@@ -160,6 +161,14 @@ export default function YwDApp() {
                 }
               })
               .catch(() => {});
+            fetch("/api/products?mine=true")
+              .then((res) => res.json())
+              .then((mineData) => {
+                if (mineData.products && Array.isArray(mineData.products)) {
+                  setMyListings(mineData.products);
+                }
+              })
+              .catch(() => {});
           }
         }
       })
@@ -168,7 +177,7 @@ export default function YwDApp() {
 
   // Filtered Products Memo
   const filteredProducts = useMemo(() => {
-    let result = [...allProducts];
+    let result = allProducts.filter((p) => p.isAvailable !== false && !p.isPaused);
 
     // Category filter
     if (selectedCategory && selectedCategory !== "all") {
@@ -297,6 +306,7 @@ export default function YwDApp() {
   // Listing published callback
   const handleListingCreated = (newProduct: any) => {
     setAllProducts((prev) => [newProduct, ...prev]);
+    setMyListings((prev) => [newProduct, ...prev]);
     setIsListProductOpen(false);
     showToast(
       "Listing published",
@@ -347,7 +357,10 @@ export default function YwDApp() {
   };
 
   const unreadNotifsCount = notifications.filter((n) => !n.isRead).length;
-  const myListings = allProducts.filter((p) => currentUserId ? p.ownerId === currentUserId : false);
+  const effectiveMyListings =
+    myListings.length > 0
+      ? myListings
+      : allProducts.filter((p) => (currentUserId ? p.ownerId === currentUserId : false));
   const wishlistItems = allProducts
     .filter((p) => wishlistIds.includes(p.id))
     .map((p) => ({ id: `w_${p.id}`, productId: p.id, product: p }));
@@ -600,31 +613,52 @@ export default function YwDApp() {
                 }
                 bookings={bookings}
                 orders={orders}
-                myListings={myListings}
+                myListings={effectiveMyListings}
                 wishlistItems={wishlistItems}
                 userAlias={userAlias}
                 onOpenReturnModal={(id) => setReturnBookingId(id)}
-                onToggleListingAvailability={(id) => {
-                  fetch(`/api/products/${id}`, { method: "PATCH" })
-                    .then(async (res) => {
-                      const data = await res.json();
-                      if (!res.ok) throw new Error(data.error || "Failed to update listing status");
-                      return data;
-                    })
-                    .then((updated) => {
-                      setAllProducts((prev) =>
-                        prev.map((p) =>
-                          p.id === id ? { ...p, isAvailable: updated.isAvailable } : p
-                        )
-                      );
-                      showToast(
-                        "Listing status updated",
-                        updated.isAvailable ? "Item is now active in marketplace" : "Item is paused"
-                      );
-                    })
-                    .catch((err: any) => {
-                      showToast("Error updating listing", err.message || "Failed to update status");
+                onToggleListingAvailability={async (id) => {
+                  try {
+                    const res = await fetch(`/api/products/${id}`, { method: "PATCH" });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || "Failed to update listing status");
+                    setMyListings((prev) =>
+                      prev.map((p) =>
+                        p.id === id
+                          ? { ...p, isAvailable: data.isAvailable, isPaused: data.isPaused }
+                          : p
+                      )
+                    );
+                    setAllProducts((prev) => {
+                      if (!data.isAvailable || data.isPaused) {
+                        return prev.filter((p) => p.id !== id);
+                      }
+                      const exists = prev.some((p) => p.id === id);
+                      return exists
+                        ? prev.map((p) => (p.id === id ? { ...p, ...data } : p))
+                        : [data, ...prev];
                     });
+                    showToast(
+                      "Listing status updated",
+                      data.isAvailable
+                        ? "Item is now active in the marketplace."
+                        : "Item unlisted from public marketplace."
+                    );
+                  } catch (err: any) {
+                    showToast("Error updating listing", err.message || "Failed to update status");
+                  }
+                }}
+                onDeleteListing={async (id) => {
+                  try {
+                    const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || "Failed to delete listing");
+                    setMyListings((prev) => prev.filter((p) => p.id !== id));
+                    setAllProducts((prev) => prev.filter((p) => p.id !== id));
+                    showToast("Listing deleted", "Your listing has been permanently removed.");
+                  } catch (err: any) {
+                    showToast("Error deleting listing", err.message || "Failed to delete listing");
+                  }
                 }}
                 onOpenProductDetail={handleOpenDetail}
                 onOpenListProduct={handleOpenListProduct}

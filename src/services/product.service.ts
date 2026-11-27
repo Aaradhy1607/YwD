@@ -2,6 +2,15 @@ import { store } from "./store";
 import { prisma } from "@/lib/prisma";
 import { sanitizeProductForPublic, sanitizeToAnonymousProfile } from "@/lib/privacy";
 
+export class ListingError extends Error {
+  status: number;
+  constructor(message: string, status = 400) {
+    super(message);
+    this.name = "ListingError";
+    this.status = status;
+  }
+}
+
 export interface ProductFilterParams {
   category?: string;
   query?: string;
@@ -46,7 +55,10 @@ export async function getProducts(params: ProductFilterParams = {}) {
   const isPg = await store.checkPostgres();
   if (isPg) {
     try {
-      const where: any = {};
+      const where: any = {
+        isAvailable: true,
+        isPaused: false,
+      };
 
       if (category && category !== "all") {
         where.OR = [
@@ -59,7 +71,7 @@ export async function getProducts(params: ProductFilterParams = {}) {
         where.isRentable = true;
       } else if (mode === "buy") {
         where.isPurchasable = true;
-        where.buyPrice = { not: null };
+        where.buyPrice = { gt: 0 };
       }
 
       if (condition && condition !== "all") {
@@ -120,7 +132,22 @@ export async function getProducts(params: ProductFilterParams = {}) {
       });
 
       // Synchronize with local store so locally listed items are never missing on refresh
-      const localProducts = store.getDB().products || [];
+      const localProducts = (store.getDB().products || []).filter((lp) => {
+        if (lp.isAvailable === false || lp.isPaused === true) return false;
+        if (category && category !== "all" && lp.categorySlug !== category && lp.categoryId !== category) return false;
+        if (mode === "rent" && !lp.isRentable) return false;
+        if (mode === "buy" && !(lp.isPurchasable && Number(lp.buyPrice) > 0)) return false;
+        if (condition && condition !== "all" && !lp.conditionGrade?.toLowerCase().includes(condition.toLowerCase())) return false;
+        if (query.trim()) {
+          const q = query.toLowerCase().trim();
+          const matches =
+            lp.title?.toLowerCase().includes(q) ||
+            lp.description?.toLowerCase().includes(q) ||
+            lp.campusHub?.toLowerCase().includes(q);
+          if (!matches) return false;
+        }
+        return true;
+      });
       const pgIds = new Set(products.map((p) => p.id));
       const localOnly = localProducts.filter((lp) => !pgIds.has(lp.id));
 
@@ -137,7 +164,9 @@ export async function getProducts(params: ProductFilterParams = {}) {
     }
   }
 
-  let allProducts = store.getDB().products;
+  let allProducts = store.getDB().products.filter(
+    (p) => p.isAvailable !== false && p.isPaused !== true
+  );
 
   // Filter by category
   if (category && category !== "all") {
@@ -150,7 +179,7 @@ export async function getProducts(params: ProductFilterParams = {}) {
   if (mode === "rent") {
     allProducts = allProducts.filter((p) => p.isRentable);
   } else if (mode === "buy") {
-    allProducts = allProducts.filter((p) => p.isPurchasable && Boolean(p.buyPrice));
+    allProducts = allProducts.filter((p) => p.isPurchasable && Number(p.buyPrice) > 0);
   }
 
   // Filter by condition
@@ -252,9 +281,64 @@ export async function getProductById(id: string) {
   };
 }
 
+function resolveListingMode(data: any) {
+  const isRentable =
+    data.listingType === "rent" || data.listingType === "both"
+      ? true
+      : data.listingType === "sell"
+      ? false
+      : data.isRentable !== false;
+
+  const hasBuyPrice = data.buyPrice != null && Number(data.buyPrice) > 0;
+  const isPurchasable =
+    data.listingType === "sell" || data.listingType === "both"
+      ? hasBuyPrice
+      : data.listingType === "rent"
+      ? false
+      : Boolean(data.isPurchasable && hasBuyPrice);
+
+  const rentalPriceDaily = isRentable ? Number(data.rentalPriceDaily || 0) : 0;
+  const rentalPriceWeekly = isRentable ? Number(data.rentalPriceWeekly || 0) : 0;
+  const rentalPriceHourly = isRentable
+    ? data.rentalPriceHourly != null && data.rentalPriceHourly !== ""
+      ? Number(data.rentalPriceHourly)
+      : Math.round(rentalPriceDaily / 6)
+    : null;
+  const rentalPriceMonthly = isRentable
+    ? data.rentalPriceMonthly != null && data.rentalPriceMonthly !== ""
+      ? Number(data.rentalPriceMonthly)
+      : Math.round(rentalPriceWeekly * 3.4)
+    : null;
+  const rentalPriceSemester = isRentable
+    ? data.rentalPriceSemester != null && data.rentalPriceSemester !== ""
+      ? Number(data.rentalPriceSemester)
+      : Math.round(rentalPriceWeekly * 8.5)
+    : null;
+  const deposit = isRentable ? Number(data.deposit || 0) : 0;
+  const buyPrice = isPurchasable ? Number(data.buyPrice) : null;
+  const mrpReference =
+    data.mrpReference != null && Number(data.mrpReference) > 0
+      ? Number(data.mrpReference)
+      : Number(buyPrice || rentalPriceDaily || 0);
+
+  return {
+    isRentable,
+    isPurchasable,
+    rentalPriceHourly,
+    rentalPriceDaily,
+    rentalPriceWeekly,
+    rentalPriceMonthly,
+    rentalPriceSemester,
+    deposit,
+    buyPrice,
+    mrpReference,
+  };
+}
+
 export async function createProductListing(data: any, ownerId: string) {
   const isPg = await store.checkPostgres();
   let createdProduct: any = null;
+  const resolved = resolveListingMode(data);
 
   if (isPg) {
     try {
@@ -272,16 +356,16 @@ export async function createProductListing(data: any, ownerId: string) {
           subcategoryId: data.subcategoryId || null,
           ownerId,
           conditionGrade: data.conditionGrade || "Mint (Like New)",
-          rentalPriceHourly: data.rentalPriceHourly ? Number(data.rentalPriceHourly) : Math.round(Number(data.rentalPriceDaily) / 6),
-          rentalPriceDaily: Number(data.rentalPriceDaily),
-          rentalPriceWeekly: Number(data.rentalPriceWeekly),
-          rentalPriceMonthly: data.rentalPriceMonthly ? Number(data.rentalPriceMonthly) : Math.round(Number(data.rentalPriceWeekly) * 3.4),
-          rentalPriceSemester: data.rentalPriceSemester ? Number(data.rentalPriceSemester) : Math.round(Number(data.rentalPriceWeekly) * 8.5),
-          buyPrice: data.buyPrice ? Number(data.buyPrice) : null,
-          mrpReference: Number(data.mrpReference),
-          deposit: Number(data.deposit),
-          isRentable: data.isRentable !== false,
-          isPurchasable: Boolean(data.isPurchasable && data.buyPrice),
+          rentalPriceHourly: resolved.rentalPriceHourly,
+          rentalPriceDaily: resolved.rentalPriceDaily,
+          rentalPriceWeekly: resolved.rentalPriceWeekly,
+          rentalPriceMonthly: resolved.rentalPriceMonthly,
+          rentalPriceSemester: resolved.rentalPriceSemester,
+          buyPrice: resolved.buyPrice,
+          mrpReference: resolved.mrpReference,
+          deposit: resolved.deposit,
+          isRentable: resolved.isRentable,
+          isPurchasable: resolved.isPurchasable,
           isAvailable: true,
           isPaused: false,
           pickupAvailable: data.pickupAvailable !== false,
@@ -339,16 +423,16 @@ export async function createProductListing(data: any, ownerId: string) {
     subcategoryId: data.subcategoryId || null,
     ownerId,
     conditionGrade: data.conditionGrade,
-    rentalPriceHourly: data.rentalPriceHourly || Math.round(data.rentalPriceDaily / 6),
-    rentalPriceDaily: data.rentalPriceDaily,
-    rentalPriceWeekly: data.rentalPriceWeekly,
-    rentalPriceMonthly: data.rentalPriceMonthly || Math.round(data.rentalPriceWeekly * 3.4),
-    rentalPriceSemester: data.rentalPriceSemester || Math.round(data.rentalPriceWeekly * 8.5),
-    buyPrice: data.buyPrice || null,
-    mrpReference: data.mrpReference,
-    deposit: data.deposit,
-    isRentable: data.isRentable !== false,
-    isPurchasable: Boolean(data.isPurchasable && data.buyPrice),
+    rentalPriceHourly: resolved.rentalPriceHourly,
+    rentalPriceDaily: resolved.rentalPriceDaily,
+    rentalPriceWeekly: resolved.rentalPriceWeekly,
+    rentalPriceMonthly: resolved.rentalPriceMonthly,
+    rentalPriceSemester: resolved.rentalPriceSemester,
+    buyPrice: resolved.buyPrice,
+    mrpReference: resolved.mrpReference,
+    deposit: resolved.deposit,
+    isRentable: resolved.isRentable,
+    isPurchasable: resolved.isPurchasable,
     isAvailable: true,
     isPaused: false,
     pickupAvailable: data.pickupAvailable !== false,
@@ -419,53 +503,85 @@ export async function getUserListings(userId: string) {
   return products.map((p) => sanitizeProductForPublic(p));
 }
 
-export async function toggleProductAvailability(productId: string, userId: string) {
+export async function toggleProductAvailability(
+  productId: string,
+  userId: string,
+  options?: { isAdmin?: boolean }
+) {
   const isPg = await store.checkPostgres();
   if (isPg) {
     try {
       const prod = await prisma.product.findUnique({ where: { id: productId } });
-      if (prod && prod.ownerId === userId) {
-        const updated = await prisma.product.update({
-          where: { id: productId },
-          data: {
-            isAvailable: !prod.isAvailable,
-            isPaused: prod.isAvailable, // paused if currently available
-          },
-          include: {
-            images: true,
-            category: true,
-            subcategory: true,
-            owner: { include: { anonymousProfile: true } },
-          },
-        });
-        return sanitizeProductForPublic(updated);
+      if (!prod) throw new ListingError("Product not found", 404);
+      if (prod.ownerId !== userId && !options?.isAdmin) {
+        throw new ListingError("Unauthorized: you can only modify your own listings.", 403);
       }
+
+      const updated = await prisma.product.update({
+        where: { id: productId },
+        data: {
+          isAvailable: !prod.isAvailable,
+          isPaused: prod.isAvailable, // paused if currently available
+        },
+        include: {
+          images: true,
+          category: true,
+          subcategory: true,
+          owner: { include: { anonymousProfile: true } },
+        },
+      });
+
+      // Keep local store in sync if present
+      store.updateDB((db) => {
+        const local = db.products.find((p) => p.id === productId);
+        if (local) {
+          local.isAvailable = updated.isAvailable;
+          local.isPaused = updated.isPaused;
+          local.updatedAt = new Date().toISOString();
+        }
+      });
+
+      return sanitizeProductForPublic({
+        ...updated,
+        categorySlug: updated.category?.slug,
+        subcategorySlug: updated.subcategory?.slug,
+      });
     } catch (e) {
+      if (e instanceof ListingError) throw e;
       console.warn("[Product Service] Postgres toggleAvailability failed:", e);
     }
   }
 
-  let updatedProduct = null;
+  let updatedProduct: any = null;
   store.updateDB((db) => {
     const prod = db.products.find((p) => p.id === productId);
-    if (prod && prod.ownerId === userId) {
-      prod.isAvailable = !prod.isAvailable;
-      prod.isPaused = !prod.isAvailable;
-      prod.updatedAt = new Date().toISOString();
-      updatedProduct = prod;
+    if (!prod) {
+      throw new ListingError("Product not found", 404);
     }
+    if (prod.ownerId !== userId && !options?.isAdmin) {
+      throw new ListingError("Unauthorized: you can only modify your own listings.", 403);
+    }
+    prod.isAvailable = !prod.isAvailable;
+    prod.isPaused = !prod.isAvailable;
+    prod.updatedAt = new Date().toISOString();
+    updatedProduct = prod;
   });
   return updatedProduct ? sanitizeProductForPublic(updatedProduct) : null;
 }
 
-export async function updateProductListing(productId: string, data: any, userId: string) {
+export async function updateProductListing(
+  productId: string,
+  data: any,
+  userId: string,
+  options?: { isAdmin?: boolean }
+) {
   const isPg = await store.checkPostgres();
   if (isPg) {
     try {
       const prod = await prisma.product.findUnique({ where: { id: productId } });
-      if (!prod) throw new Error("Product not found");
-      if (prod.ownerId !== userId) {
-        throw new Error("Unauthorized: you can only modify your own listings.");
+      if (!prod) throw new ListingError("Product not found", 404);
+      if (prod.ownerId !== userId && !options?.isAdmin) {
+        throw new ListingError("Unauthorized: you can only modify your own listings.", 403);
       }
 
       const updateData: any = {};
@@ -478,6 +594,8 @@ export async function updateProductListing(productId: string, data: any, userId:
       if (data.rentalPriceWeekly !== undefined) updateData.rentalPriceWeekly = Number(data.rentalPriceWeekly);
       if (data.buyPrice !== undefined) updateData.buyPrice = data.buyPrice ? Number(data.buyPrice) : null;
       if (data.deposit !== undefined) updateData.deposit = Number(data.deposit);
+      if (data.isRentable !== undefined) updateData.isRentable = Boolean(data.isRentable);
+      if (data.isPurchasable !== undefined) updateData.isPurchasable = Boolean(data.isPurchasable);
       if (data.campusHub) updateData.campusHub = data.campusHub;
       if (data.specs) updateData.specs = data.specs;
 
@@ -494,6 +612,7 @@ export async function updateProductListing(productId: string, data: any, userId:
 
       return sanitizeProductForPublic(updated);
     } catch (e) {
+      if (e instanceof ListingError) throw e;
       console.warn("[Product Service] Postgres updateProductListing failed:", e);
     }
   }
@@ -503,10 +622,10 @@ export async function updateProductListing(productId: string, data: any, userId:
   store.updateDB((db) => {
     const prod = db.products.find((p) => p.id === productId);
     if (!prod) {
-      throw new Error("Product not found");
+      throw new ListingError("Product not found", 404);
     }
-    if (prod.ownerId !== userId) {
-      throw new Error("Unauthorized: you can only modify your own listings.");
+    if (prod.ownerId !== userId && !options?.isAdmin) {
+      throw new ListingError("Unauthorized: you can only modify your own listings.", 403);
     }
 
     if (data.title) prod.title = data.title;
@@ -544,30 +663,70 @@ export async function updateProductListing(productId: string, data: any, userId:
   return updatedProduct ? sanitizeProductForPublic(updatedProduct) : null;
 }
 
-export async function deleteProductListing(productId: string, userId: string) {
+export async function deleteProductListing(
+  productId: string,
+  userId: string,
+  options?: { isAdmin?: boolean }
+) {
   const isPg = await store.checkPostgres();
   if (isPg) {
     try {
       const prod = await prisma.product.findUnique({ where: { id: productId } });
-      if (!prod) throw new Error("Product not found");
-      if (prod.ownerId !== userId) {
-        throw new Error("Unauthorized: you can only delete your own listings.");
+      if (!prod) throw new ListingError("Product not found", 404);
+      if (prod.ownerId !== userId && !options?.isAdmin) {
+        throw new ListingError("Unauthorized: you can only delete your own listings.", 403);
       }
 
-      // Check active bookings in DB
-      const activeBooking = await prisma.rentalBooking.findFirst({
-        where: {
-          productId,
-          status: { in: ["CONFIRMED", "ACTIVE"] },
-        },
-      });
-      if (activeBooking) {
-        throw new Error("Cannot delete listing with active or confirmed bookings.");
+      // Check active bookings, rentals, or orders in DB
+      const [activeBooking, activeRental, activeOrder] = await Promise.all([
+        prisma.rentalBooking.findFirst({
+          where: {
+            productId,
+            status: { in: ["PENDING", "CONFIRMED", "ACTIVE"] },
+          },
+        }),
+        prisma.rental.findFirst({
+          where: {
+            itemId: productId,
+            status: { in: ["CREATED", "PENDING", "ACTIVE", "INSPECT"] },
+          },
+        }),
+        prisma.purchaseOrder.findFirst({
+          where: {
+            productId,
+            status: { in: ["PENDING", "PAID", "PROCESSING", "SHIPPED"] },
+          },
+        }),
+      ]);
+      if (activeBooking || activeRental || activeOrder) {
+        throw new ListingError(
+          "Cannot delete listing with active or confirmed bookings or orders. Please unlist it instead.",
+          409
+        );
+      }
+
+      const [anyBooking, anyRental, anyOrder] = await Promise.all([
+        prisma.rentalBooking.findFirst({ where: { productId } }),
+        prisma.rental.findFirst({ where: { itemId: productId } }),
+        prisma.purchaseOrder.findFirst({ where: { productId } }),
+      ]);
+      if (anyBooking || anyRental || anyOrder) {
+        throw new ListingError(
+          "This listing has past booking or order history and cannot be permanently deleted. Please unlist it instead.",
+          409
+        );
       }
 
       await prisma.product.delete({ where: { id: productId } });
+
+      // Remove from local store as well if present
+      store.updateDB((db) => {
+        db.products = db.products.filter((p) => p.id !== productId);
+      });
+
       return { success: true, id: productId };
     } catch (e) {
+      if (e instanceof ListingError) throw e;
       console.warn("[Product Service] Postgres deleteProductListing failed:", e);
     }
   }
@@ -577,18 +736,18 @@ export async function deleteProductListing(productId: string, userId: string) {
   store.updateDB((db) => {
     const prod = db.products.find((p) => p.id === productId);
     if (!prod) {
-      throw new Error("Product not found");
+      throw new ListingError("Product not found", 404);
     }
-    if (prod.ownerId !== userId) {
-      throw new Error("Unauthorized: you can only delete your own listings.");
+    if (prod.ownerId !== userId && !options?.isAdmin) {
+      throw new ListingError("Unauthorized: you can only delete your own listings.", 403);
     }
 
     // Check if there are active or confirmed bookings for this item
     const activeBooking = db.rentalBookings.find(
-      (b) => b.productId === productId && ["CONFIRMED", "ACTIVE"].includes(b.status)
+      (b) => b.productId === productId && ["PENDING", "CONFIRMED", "ACTIVE"].includes(b.status)
     );
     if (activeBooking) {
-      throw new Error("Cannot delete listing with active or confirmed bookings.");
+      throw new ListingError("Cannot delete listing with active or confirmed bookings.", 409);
     }
 
     db.products = db.products.filter((p) => p.id !== productId);

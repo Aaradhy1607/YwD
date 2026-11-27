@@ -15,6 +15,8 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { formatINR } from "@/lib/pricing";
 
@@ -26,7 +28,8 @@ interface UserDashboardProps {
   wishlistItems: any[];
   userAlias?: string;
   onOpenReturnModal: (bookingId: string) => void;
-  onToggleListingAvailability: (productId: string) => void;
+  onToggleListingAvailability: (productId: string) => Promise<void> | void;
+  onDeleteListing?: (productId: string) => Promise<void> | void;
   onOpenProductDetail: (productId: string) => void;
   onOpenListProduct: () => void;
   onExplore?: () => void;
@@ -63,6 +66,7 @@ export function UserDashboard({
   userAlias = "EcoRenter-4912",
   onOpenReturnModal,
   onToggleListingAvailability,
+  onDeleteListing,
   onOpenProductDetail,
   onOpenListProduct,
   onExplore,
@@ -73,6 +77,8 @@ export function UserDashboard({
     setActiveTab(initialTab);
   }, [initialTab]);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [confirmDeleteListing, setConfirmDeleteListing] = useState<any | null>(null);
+  const [listingActionId, setListingActionId] = useState<string | null>(null);
   const [revealedOtpIds, setRevealedOtpIds] = useState<Record<string, boolean>>({});
   const [actionFeedback, setActionFeedback] = useState<{
     id: string;
@@ -665,55 +671,162 @@ export function UserDashboard({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {myListings.map((listing) => (
-                <div
-                  key={listing.id}
-                  className="bg-[#FFFFFF] rounded-2xl border border-[#E5DEC9] p-4 flex gap-4 items-center justify-between"
-                >
-                  <div className="flex items-center gap-3.5">
-                    {(listing.images?.[0]?.url ||
-                      (Array.isArray(listing.images) && typeof listing.images[0] === "string" && listing.images[0])) ? (
-                      <img
-                        src={
-                          listing.images?.[0]?.url ||
-                          (Array.isArray(listing.images) && listing.images[0])
-                        }
-                        alt={listing.title}
-                        className="w-16 h-16 rounded-xl object-cover border border-[#E5DEC9]"
-                      />
-                    ) : (
-                      <div className="w-16 h-16 rounded-xl bg-[#FAF7F2] border border-[#E5DEC9] flex items-center justify-center shrink-0">
-                        <Package className="w-5 h-5 text-[#9BB5A3]" />
+              {myListings.map((listing) => {
+                const isActive = listing.isAvailable !== false && !listing.isPaused;
+                const isRentable = listing.isRentable !== false;
+                const isPurchasable = Boolean(listing.isPurchasable && listing.buyPrice);
+                const modeLabel =
+                  isRentable && isPurchasable
+                    ? "Rent & Sell"
+                    : isPurchasable
+                    ? "Sell"
+                    : "Rent";
+
+                return (
+                  <div
+                    key={listing.id}
+                    className="bg-[#FFFFFF] rounded-2xl border border-[#E5DEC9] p-4 flex flex-col sm:flex-row gap-4 sm:items-center justify-between"
+                  >
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      {(listing.images?.[0]?.url ||
+                        (Array.isArray(listing.images) && typeof listing.images[0] === "string" && listing.images[0])) ? (
+                        <img
+                          src={
+                            listing.images?.[0]?.url ||
+                            (Array.isArray(listing.images) && listing.images[0])
+                          }
+                          alt={listing.title}
+                          className="w-16 h-16 rounded-xl object-cover border border-[#E5DEC9] shrink-0"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-xl bg-[#FAF7F2] border border-[#E5DEC9] flex items-center justify-center shrink-0">
+                          <Package className="w-5 h-5 text-[#9BB5A3]" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold text-xs sm:text-sm text-[#18352D] line-clamp-1">
+                            {listing.title}
+                          </h3>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#FAF7F2] text-[#63736A] border border-[#E5DEC9]">
+                            {modeLabel}
+                          </span>
+                        </div>
+                        <span className="text-xs font-mono font-medium text-[#C46A42] tabular-nums block mt-0.5">
+                          {isRentable && isPurchasable
+                            ? `${formatINR(listing.rentalPriceDaily)}/day • Deposit: ${formatINR(listing.deposit)} • Sale: ${formatINR(listing.buyPrice)}`
+                            : isPurchasable
+                            ? `Sale Price: ${formatINR(listing.buyPrice)}`
+                            : `${formatINR(listing.rentalPriceDaily)}/day • Deposit: ${formatINR(listing.deposit)}`}
+                        </span>
+                        <span className="block text-[11px] text-[#63736A] mt-0.5 truncate">
+                          {listing.campusHub}
+                        </span>
                       </div>
-                    )}
-                    <div>
-                      <h3 className="font-semibold text-xs sm:text-sm text-[#18352D] line-clamp-1">
-                        {listing.title}
-                      </h3>
-                      <span className="text-xs font-mono font-medium text-[#C46A42] tabular-nums">
-                        {formatINR(listing.rentalPriceDaily)}/day • Deposit:{" "}
-                        {formatINR(listing.deposit)}
+                    </div>
+
+                    <div className="flex sm:flex-col items-center sm:items-end justify-between gap-2 shrink-0">
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${
+                          isActive
+                            ? "bg-emerald-50 text-[#18352D] border-[#789681]"
+                            : "bg-[#FAF7F2] text-[#63736A] border-[#E5DEC9]"
+                        }`}
+                      >
+                        {isActive ? "Active" : "Unlisted"}
                       </span>
-                      <span className="block text-[11px] text-[#63736A] mt-0.5">
-                        {listing.campusHub}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={listingActionId === listing.id}
+                          onClick={async () => {
+                            setListingActionId(listing.id);
+                            try {
+                              await onToggleListingAvailability(listing.id);
+                            } finally {
+                              setListingActionId(null);
+                            }
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-[#FAF7F2] hover:bg-[#F5F0E8] border border-[#E5DEC9] text-xs font-medium text-[#18352D] transition-colors disabled:opacity-50"
+                        >
+                          {isActive ? "Unlist" : "Relist"}
+                        </button>
+                        {onDeleteListing && (
+                          <button
+                            type="button"
+                            disabled={listingActionId === listing.id}
+                            onClick={() => setConfirmDeleteListing(listing)}
+                            aria-label={`Delete ${listing.title}`}
+                            className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-xs font-medium text-rose-700 inline-flex items-center gap-1 transition-colors disabled:opacity-50"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>Delete</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
+                );
+              })}
+            </div>
+          )}
 
-                  <div className="flex flex-col items-end gap-2">
-                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#FAF7F2] text-[#18352D] border border-[#E5DEC9]">
-                      {listing.isAvailable ? "Active" : "Paused"}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => onToggleListingAvailability(listing.id)}
-                      className="text-xs font-medium text-[#18352D] hover:underline"
+          {/* Confirmation Dialog for Permanent Deletion */}
+          {confirmDeleteListing && onDeleteListing && (
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="delete-listing-dialog-title"
+              className="fixed inset-0 z-50 bg-[#202522]/75 backdrop-blur-xs flex items-center justify-center p-4"
+            >
+              <div className="bg-[#FFFFFF] w-full max-w-md rounded-2xl border border-[#E5DEC9] shadow-2xl p-6 space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-700 shrink-0">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3
+                      id="delete-listing-dialog-title"
+                      className="font-semibold text-base text-[#18352D]"
                     >
-                      {listing.isAvailable ? "Pause" : "Resume"}
-                    </button>
+                      Delete listing permanently?
+                    </h3>
+                    <p className="text-xs text-[#63736A] mt-1 leading-relaxed">
+                      You are about to permanently delete{" "}
+                      <strong className="text-[#18352D]">{confirmDeleteListing.title}</strong>. This
+                      cannot be undone. If you only want to hide it temporarily, use{" "}
+                      <strong>Unlist</strong> instead.
+                    </p>
                   </div>
                 </div>
-              ))}
+                <div className="flex items-center justify-end gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    disabled={listingActionId === confirmDeleteListing.id}
+                    onClick={() => setConfirmDeleteListing(null)}
+                    className="px-4 py-2 rounded-xl bg-[#FAF7F2] hover:bg-[#F5F0E8] border border-[#E5DEC9] text-xs font-semibold text-[#18352D] transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={listingActionId === confirmDeleteListing.id}
+                    onClick={async () => {
+                      const targetId = confirmDeleteListing.id;
+                      setListingActionId(targetId);
+                      try {
+                        await onDeleteListing(targetId);
+                        setConfirmDeleteListing(null);
+                      } finally {
+                        setListingActionId(null);
+                      }
+                    }}
+                    className="px-4 py-2 rounded-xl bg-rose-700 hover:bg-rose-800 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+                  >
+                    {listingActionId === confirmDeleteListing.id ? "Deleting..." : "Confirm Delete"}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>

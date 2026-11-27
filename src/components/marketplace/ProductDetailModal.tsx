@@ -87,6 +87,11 @@ export function ProductDetailModal({
       .then((res) => res.json())
       .then((data) => {
         setProduct(data);
+        if (data && data.isRentable === false && data.isPurchasable) {
+          setMode("buy");
+        } else if (data && data.isRentable !== false && !data.isPurchasable) {
+          setMode("rent");
+        }
         setLoading(false);
       })
       .catch((err) => {
@@ -452,13 +457,16 @@ export function ProductDetailModal({
                 <button
                   type="button"
                   onClick={() => setMode("rent")}
+                  disabled={product.isRentable === false}
                   className={`py-2 rounded-lg text-xs font-medium transition-colors text-center ${
-                    mode === "rent"
+                    product.isRentable === false
+                      ? "opacity-40 cursor-not-allowed text-[#63736A]"
+                      : mode === "rent"
                       ? "bg-[#18352D] text-white shadow-xs"
                       : "text-[#63736A] hover:text-[#18352D]"
                   }`}
                 >
-                  Rent for duration
+                  {product.isRentable === false ? "Rent (Sell only)" : "Rent for duration"}
                 </button>
                 <button
                   type="button"

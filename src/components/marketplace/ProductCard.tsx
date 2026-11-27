@@ -85,6 +85,9 @@ export function ProductCard({
   };
 
   const { rate, unit } = getDisplayRate(selectedTier);
+  const isRentable = product.isRentable !== false;
+  const isPurchasable = Boolean(product.isPurchasable && product.buyPrice);
+  const defaultActionMode: "rent" | "buy" = !isRentable && isPurchasable ? "buy" : "rent";
   const statusLabel = product.conditionGrade
     ? product.conditionGrade
     : product.isAvailable === false
@@ -93,11 +96,11 @@ export function ProductCard({
 
   return (
     <article
-      onClick={() => onOpenDetail(product.id, "rent", selectedTier)}
+      onClick={() => onOpenDetail(product.id, defaultActionMode, selectedTier)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          onOpenDetail(product.id, "rent", selectedTier);
+          onOpenDetail(product.id, defaultActionMode, selectedTier);
         }
       }}
       tabIndex={0}
@@ -199,32 +202,50 @@ export function ProductCard({
         {/* Pricing Hierarchy & Quick Action */}
         <div className="px-5 pb-5 pt-3 border-t border-[#E5DEC9] space-y-3">
           <div className="flex items-end justify-between gap-3">
-            <div>
-              <div className="flex items-baseline gap-1">
-                <span className="font-semibold text-lg text-[#18352D] font-mono tabular-nums">
-                  {formatINR(rate)}
-                </span>
-                <span className="text-xs text-[#63736A]">/{unit}</span>
-              </div>
-            </div>
+            {isRentable ? (
+              <>
+                <div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="font-semibold text-lg text-[#18352D] font-mono tabular-nums">
+                      {formatINR(rate)}
+                    </span>
+                    <span className="text-xs text-[#63736A]">/{unit}</span>
+                  </div>
+                </div>
 
-            <div className="text-right text-[11px] leading-tight space-y-0.5">
-              <span className="block text-[#63736A] font-mono tabular-nums">
-                Deposit {formatINR(product.deposit)}
-              </span>
-              {product.isPurchasable && Boolean(product.buyPrice) && (
-                <span className="block text-[#18352D] font-medium font-mono tabular-nums">
-                  Buy {formatINR(product.buyPrice)}
-                </span>
-              )}
-            </div>
+                <div className="text-right text-[11px] leading-tight space-y-0.5">
+                  <span className="block text-[#63736A] font-mono tabular-nums">
+                    Deposit {formatINR(product.deposit)}
+                  </span>
+                  {isPurchasable && (
+                    <span className="block text-[#18352D] font-medium font-mono tabular-nums">
+                      Buy {formatINR(product.buyPrice)}
+                    </span>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <span className="block text-[10px] font-mono uppercase tracking-wider text-[#C46A42]">
+                    For Sale
+                  </span>
+                  <span className="font-semibold text-lg text-[#18352D] font-mono tabular-nums">
+                    {formatINR(product.buyPrice)}
+                  </span>
+                </div>
+                <div className="text-right text-[11px] leading-tight">
+                  <span className="block text-[#63736A] font-medium">Outright buy</span>
+                </div>
+              </>
+            )}
           </div>
 
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onOpenDetail(product.id, "rent", selectedTier);
+              onOpenDetail(product.id, defaultActionMode, selectedTier);
             }}
             className={`w-full py-2.5 px-4 rounded-xl bg-[#18352D] hover:bg-[#C46A42] text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-200 ${
               featured
@@ -232,7 +253,7 @@ export function ProductCard({
                 : "sm:opacity-0 sm:translate-y-1 sm:group-hover:opacity-100 sm:group-hover:translate-y-0 sm:focus:opacity-100 sm:focus:translate-y-0"
             }`}
           >
-            <span>Quick view &amp; reserve</span>
+            <span>{isRentable ? "Quick view & reserve" : "Quick view & buy"}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>

@@ -4,8 +4,24 @@ import {
   toggleProductAvailability,
   updateProductListing,
   deleteProductListing,
+  ListingError,
 } from "@/services/product.service";
 import { auth } from "@/lib/auth";
+import { assertAdminSession } from "@/lib/adminGuard";
+import { logAuditEvent } from "@/lib/security";
+
+async function resolveActor() {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) {
+    return null;
+  }
+  const adminCheck = await assertAdminSession();
+  return {
+    userId,
+    isAdmin: adminCheck.authorized,
+  };
+}
 
 export async function GET(
   req: NextRequest,
@@ -17,6 +33,14 @@ export async function GET(
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    const prod = product as any;
+    if (prod.isPaused || prod.isAvailable === false) {
+      const actor = await resolveActor();
+      if (!actor || (prod.ownerId !== actor.userId && !actor.isAdmin)) {
+        return NextResponse.json({ error: "Product not found" }, { status: 404 });
+      }
     }
 
     return NextResponse.json(product);
@@ -34,13 +58,12 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) {
+    const actor = await resolveActor();
+    if (!actor) {
       return NextResponse.json({ error: "Unauthorized: Authentication required." }, { status: 401 });
     }
 
-    const updated = await toggleProductAvailability(id, userId);
+    const updated = await toggleProductAvailability(id, actor.userId, { isAdmin: actor.isAdmin });
     if (!updated) {
       return NextResponse.json(
         { error: "Unauthorized or product not found" },
@@ -48,9 +71,19 @@ export async function PATCH(
       );
     }
 
+    await logAuditEvent({
+      userId: actor.userId,
+      action: actor.isAdmin ? "ADMIN_TOGGLE_PRODUCT_AVAILABILITY" : "USER_TOGGLE_PRODUCT_AVAILABILITY",
+      resource: `product:${id}`,
+      metadata: { isAvailable: updated.isAvailable, isPaused: updated.isPaused },
+    });
+
     return NextResponse.json(updated);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error instanceof ListingError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: error.message || "Failed to update listing" }, { status: 500 });
   }
 }
 
@@ -60,17 +93,19 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) {
+    const actor = await resolveActor();
+    if (!actor) {
       return NextResponse.json({ error: "Unauthorized: Authentication required." }, { status: 401 });
     }
 
     const body = await req.json();
-    const updated = await updateProductListing(id, body, userId);
+    const updated = await updateProductListing(id, body, actor.userId, { isAdmin: actor.isAdmin });
 
     return NextResponse.json(updated);
   } catch (error: any) {
+    if (error instanceof ListingError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json(
       { error: error.message || "Failed to update listing" },
       { status: 400 }
@@ -84,15 +119,24 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) {
+    const actor = await resolveActor();
+    if (!actor) {
       return NextResponse.json({ error: "Unauthorized: Authentication required." }, { status: 401 });
     }
 
-    const result = await deleteProductListing(id, userId);
+    const result = await deleteProductListing(id, actor.userId, { isAdmin: actor.isAdmin });
+
+    await logAuditEvent({
+      userId: actor.userId,
+      action: actor.isAdmin ? "ADMIN_DELETE_PRODUCT" : "USER_DELETE_PRODUCT",
+      resource: `product:${id}`,
+    });
+
     return NextResponse.json(result);
   } catch (error: any) {
+    if (error instanceof ListingError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json(
       { error: error.message || "Failed to delete listing" },
       { status: 400 }

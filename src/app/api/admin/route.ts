@@ -198,6 +198,19 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true, product: updated });
       }
 
+      if (action === "DELETE_PRODUCT") {
+        const { deleteProductListing } = await import("@/services/product.service");
+        const result = await deleteProductListing(targetId, gate.user?.id || "", { isAdmin: true });
+
+        await logAuditEvent({
+          userId: gate.user?.id,
+          action: "ADMIN_DELETE_PRODUCT",
+          resource: `product:${targetId}`,
+        });
+
+        return NextResponse.json({ ...result, success: true });
+      }
+
       if (action === "RESOLVE_DISPUTE") {
         const dispute = await prisma.dispute.findUnique({
           where: { id: targetId },
@@ -256,9 +269,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, message: "Action processed" });
   } catch (error: any) {
+    const status = typeof error?.status === "number" ? error.status : 500;
     return NextResponse.json(
       { error: error.message || "Failed to execute administrative action" },
-      { status: 500 }
+      { status }
     );
   }
 }
